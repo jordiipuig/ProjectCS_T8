@@ -1,20 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Globalization;
 using System.Windows.Forms;
-using FlightLib;
 
 namespace Interface_form_
 {
     public partial class SafetySettingsForm : Form
     {
-        // Backing fields (optional since we expose properties)
-        // Expose parsed values to callers (read-only)
         public double CycleTime { get; private set; }
         public double SecurityDistance { get; private set; }
 
@@ -22,36 +13,37 @@ namespace Interface_form_
         {
             InitializeComponent();
 
-            // Ensure Cancel button closes the dialog (designer may or may not have wired it)
             if (cancelButton != null)
                 cancelButton.Click += cancelButton_Click;
         }
 
         private void acceptButton_Click(object sender, EventArgs e)
         {
-            try
+            if (!TryParsePositiveDouble(cyclebox.Text, out double cycleTime) ||
+                !TryParsePositiveDouble(securitybox.Text, out double securityDistance))
             {
-                double cycleTime = Convert.ToDouble(cyclebox.Text);
-                double securityDistance = Convert.ToDouble(securitybox.Text);
-
-                CycleTime = cycleTime;
-                SecurityDistance = securityDistance;
-            }
-            catch
-            {
-                MessageBox.Show("Format Error");
+                MessageBox.Show("El tiempo de ciclo y la distancia de seguridad deben ser valores numéricos mayores que 0.", "Error de validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
 
-            this.DialogResult = DialogResult.OK;
-            this.Close();
+            CycleTime = cycleTime;
+            SecurityDistance = securityDistance;
+
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+
+        private static bool TryParsePositiveDouble(string text, out double value)
+        {
+            return (double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value) ||
+                    double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value))
+                   && value > 0;
         }
 
         private void cancelButton_Click(object sender, EventArgs e)
         {
-            this.DialogResult = DialogResult.Cancel;
-            this.Close();
+            DialogResult = DialogResult.Cancel;
+            Close();
         }
-
-       
     }
 }
