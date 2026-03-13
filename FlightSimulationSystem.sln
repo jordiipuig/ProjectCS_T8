@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.3.32819.101
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimulatorConsole", "SimulatorConsole\SimulatorConsole.csproj", "{CE7E8A4A-F1F7-4EAF-8088-7450A2A8B5A0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlightSimulatorConsoleApp", "SimulatorConsole\SimulatorConsole.csproj", "{CE7E8A4A-F1F7-4EAF-8088-7450A2A8B5A0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlightLib", "FlightLib\FlightLib.csproj", "{44556C78-FA9F-4CFE-8BBB-87D2116977B9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlightSimulationCoreLibrary", "FlightLib\FlightLib.csproj", "{44556C78-FA9F-4CFE-8BBB-87D2116977B9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Interface(form)", "Interface(form)\Interface(form).csproj", "{AD32C575-0A33-4BD9-994C-4F5A1766BC94}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlightSimulationDesktopInterface", "Interface(form)\Interface(form).csproj", "{AD32C575-0A33-4BD9-994C-4F5A1766BC94}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -25,8 +25,22 @@ namespace FlightLib
             this.velocidad = velocidad;
         }
 
+        public FlightPlan(string id, Position initialPosition, Position currentPosition, Position finalPosition, double velocidad)
+        {
+            this.id = id;
+            this.initialPosition = initialPosition;
+            this.currentPosition = currentPosition;
+            this.finalPosition = finalPosition;
+            this.velocidad = velocidad;
+        }
+
         public FlightPlan()
         {
+            id = string.Empty;
+            initialPosition = new Position(0, 0);
+            currentPosition = new Position(0, 0);
+            finalPosition = new Position(0, 0);
+            velocidad = 0;
         }
 
         //Get y Set para cada atributo
@@ -69,6 +83,12 @@ namespace FlightLib
                 currentPosition = nextPosition;
             else
                 currentPosition = finalPosition;
+        }
+
+        // Alias en inglés para mantener compatibilidad con los enunciados
+        public void Move(double time)
+        {
+            Mover(time);
         }
 
         public void Restart()
