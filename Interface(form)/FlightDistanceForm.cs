@@ -46,3 +46,4 @@ namespace Interface_form_
             Controls.Add(distanceLabel);
         }
     }
+}
