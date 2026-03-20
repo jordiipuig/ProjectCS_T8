@@ -21,13 +21,15 @@ namespace Interface_form_
             InitializeComponent();
             flightplans = _flightPlans;
 
-            // Subscribe to the Accept button click event
+            // Mantiene la consulta clásica mediante selección manual de dos filas.
             acceptbtn.Click += Acceptbtn_Click;
+            // Al pulsar una fila se abre el detalle de distancia del vuelo seleccionado.
+            Finfo.CellClick += Finfo_CellClick;
         }
 
         private void FlightGrid_Load(object sender, EventArgs e)
         {
-            // Configura las columnas del DataGridView
+            // Configura las columnas del DataGridView que resume el estado actual.
             Finfo.Columns.Clear();
             Finfo.Rows.Clear();
             Finfo.ColumnCount = 3;
@@ -35,7 +37,7 @@ namespace Interface_form_
             Finfo.Columns[1].Name = "Posición Actual u";
             Finfo.Columns[2].Name = "Velocidad u/s";
 
-            // Llena el DataGridView con los datos de cada FlightPlan
+            // Llena el DataGridView con el estado de cada vuelo disponible.
             int numFlights = flightplans.getnum();
             for (int i = 0; i < numFlights; i++)
             {
@@ -55,8 +57,26 @@ namespace Interface_form_
             Finfo.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         }
 
-        // Remove the automatic calculation from selection change
-        // private void Finfo_SelectionChanged(object sender, EventArgs e) { }
+        private void Finfo_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || flightplans.getnum() < 2)
+            {
+                return;
+            }
+
+            FlightPlan selectedFlight = flightplans.GetFlightPlan(e.RowIndex);
+            FlightPlan otherFlight = GetOtherFlight(e.RowIndex);
+
+            if (selectedFlight == null || otherFlight == null)
+            {
+                return;
+            }
+
+            using (FlightDistanceForm form = new FlightDistanceForm(selectedFlight, otherFlight))
+            {
+                form.ShowDialog(this);
+            }
+        }
 
         private void Acceptbtn_Click(object sender, EventArgs e)
         {
@@ -76,6 +96,18 @@ namespace Interface_form_
                 distancebox.Text = "Seleccione dos vuelos";
             }
         }
+
+        private FlightPlan GetOtherFlight(int selectedIndex)
+        {
+            for (int i = 0; i < flightplans.getnum(); i++)
+            {
+                if (i != selectedIndex)
+                {
+                    return flightplans.GetFlightPlan(i);
+                }
+            }
+
+            return null;
+        }
     }
 }
-
