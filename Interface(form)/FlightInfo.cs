@@ -22,11 +22,13 @@ namespace Interface_form_
 
         public void setFlight(FlightPlan f)
         {
+            // Guarda el vuelo que se mostrará cuando se cargue la ventana.
             this.currentFP = f;
         }
 
         private void FlightInfo_Load(object sender, EventArgs e)
         {
+            // Vuelca en pantalla el estado actual del vuelo seleccionado.
             Position pos = currentFP.GetCurrentPosition();
             double x = pos.GetX();
             double y = pos.GetY();

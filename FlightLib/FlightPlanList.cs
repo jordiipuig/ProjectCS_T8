@@ -8,6 +8,7 @@ namespace FlightLib
 {
     public class FlightPlanList
     {
+        // Contenedor sencillo para los vuelos activos de la simulación.
         FlightPlan[] vector = new FlightPlan[10];
         int number = 0;
 
@@ -19,6 +20,7 @@ namespace FlightLib
 
         public int AddFlightPlan(FlightPlan p)
         {
+            // Inserta un vuelo al final si todavía queda capacidad.
             if (number == 10)
             { return -1; }
             else
@@ -31,6 +33,7 @@ namespace FlightLib
 
         public FlightPlan GetFlightPlan(int i)
         {
+            // Devuelve el vuelo pedido o null si el índice no existe.
             if (i < 0 || i >= number)
             { return null; }
             else
@@ -42,6 +45,7 @@ namespace FlightLib
         }
         public void Mover(double tiempo)
         {
+            // Avanza todos los vuelos el mismo tiempo de simulación.
             int i = 0;
             while (i < number)
             {
@@ -52,6 +56,7 @@ namespace FlightLib
         }
         public void Clear()
         {
+            // Vacía por completo la colección de vuelos cargados.
             for (int i = 0; i < number; i++)
                 vector[i] = null;
             number = 0;
@@ -59,6 +64,7 @@ namespace FlightLib
 
         public void EscribeConsola()
         {
+            // Muestra por consola el estado de todos los vuelos almacenados.
             int i = 0;
             while (i < number)
             {

@@ -19,6 +19,7 @@ namespace Interface_form_
 
         private void acceptButton_Click(object sender, EventArgs e)
         {
+            // Valida y guarda la configuración mínima necesaria para simular.
             if (!TryParsePositiveDouble(cyclebox.Text, out double cycleTime) ||
                 !TryParsePositiveDouble(securitybox.Text, out double securityDistance))
             {
@@ -35,6 +36,7 @@ namespace Interface_form_
 
         private static bool TryParsePositiveDouble(string text, out double value)
         {
+            // Acepta formato local o invariante, pero exige valores mayores que cero.
             return (double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value) ||
                     double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value))
                    && value > 0;
