@@ -7,9 +7,10 @@ namespace Interface_form_
 {
     public partial class Main : Form
     {
+        // Estado compartido entre los formularios secundarios.
         private FlightPlanList flightPlans = new FlightPlanList();
-        private double securityDistance;
-        private double cycleTime;
+        private double securityDistance = 50;
+        private double cycleTime = 1;
 
         public Main()
         {
@@ -18,12 +19,10 @@ namespace Interface_form_
 
         private void flightPlansToolStripMenuItem1_Click(object sender, EventArgs e)
         {
-            // Open modal dialog so we can get the created FlightPlan objects
-            //using (var form = new FlightPlanForm())
+            // Abre el formulario que crea o reemplaza los vuelos cargados.
             FlightPlanForm form = new FlightPlanForm(flightPlans);
             if (form.ShowDialog(this) == DialogResult.OK)
             {
-                // No reasignes flightPlans, solo usa la instancia existente
                 flightPlans.EscribeConsola();
                 MessageBox.Show("Flight plans added to Main.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
@@ -35,11 +34,10 @@ namespace Interface_form_
             {
                 if (form.ShowDialog(this) == DialogResult.OK)
                 {
-                    // Read values exposed by the form
+                    // Lee y conserva la configuración activa de la simulación.
                     securityDistance = form.SecurityDistance;
                     cycleTime = form.CycleTime;
 
-                    // Optional: reflect change in UI or notify user
                     MessageBox.Show($"Security distance set to {securityDistance}\nCycle time set to {cycleTime}", "Safety Settings", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
@@ -47,7 +45,7 @@ namespace Interface_form_
 
         private void showToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            // Obtener los dos primeros planes guardados (si existen)
+            // Verifica que existen vuelos suficientes antes de abrir la simulación.
             FlightPlan fp1 = flightPlans.GetFlightPlan(0);
             FlightPlan fp2 = flightPlans.GetFlightPlan(1);
 
@@ -57,7 +55,7 @@ namespace Interface_form_
                 return;
             }
 
-            // Abrir formulario de simulación (modal)
+            // Abre el formulario principal de simulación con la configuración actual.
             SimulationForm form = new SimulationForm(flightPlans, cycleTime, securityDistance);
             form.ShowDialog(this);
            
