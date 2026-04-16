@@ -8,7 +8,7 @@ namespace FlightLib
 {
     public class Position
     {
-        // Atributos
+        // Coordenadas cartesianas del punto.
         double x; // coordenada X (2D)
         double y; // coordenada Y (2D)
 
@@ -20,7 +20,7 @@ namespace FlightLib
             this.y = y;
         }
 
-        // Metodos
+        // Métodos básicos de acceso y cálculo.
 
         public double GetX()
         // getter del atributo x
@@ -31,7 +31,7 @@ namespace FlightLib
         { return y; }
 
         public double Distancia(Position b)
-        // retorna la distancia entre los dos Postion
+        // Devuelve la distancia euclídea entre esta posición y otra.
         {
             double resultado = Math.Sqrt((x - b.x) * (x - b.x) + (y - b.y) * (y - b.y));
             return resultado;

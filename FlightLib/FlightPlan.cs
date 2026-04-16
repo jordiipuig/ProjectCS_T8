@@ -8,7 +8,7 @@ namespace FlightLib
 {
     public class FlightPlan
     {
-        // Atributos
+        // Datos que definen el plan y el estado actual del vuelo.
         string id; // identificador
         Position initialPosition;
         Position currentPosition; // posicion actual
@@ -43,7 +43,7 @@ namespace FlightLib
             velocidad = 0;
         }
 
-        //Get y Set para cada atributo
+        // Métodos de acceso para poder consultar y modificar el vuelo desde la UI.
         public string GetId() { return id; }
         public void SetId(string value) { id = value; }
 
@@ -59,26 +59,26 @@ namespace FlightLib
         public double GetVelocidad() { return velocidad; }
         public void SetVelocidad(double value) { velocidad = value; }
 
-        // Mueve el vuelo a la posición correspondiente a viajar durante el tiempo que se recibe como parámetro
+        // Mueve el vuelo durante el tiempo indicado sin sobrepasar su destino.
 
         public void Mover(double tiempo)
         {
-            //Calculamos la distancia recorrida en el tiempo dado
+            // Calcula la distancia recorrida con la velocidad actual.
             double distancia = tiempo * this.velocidad / 60;
 
-            //Calculamos las razones trigonométricas
+            // Obtiene la dirección del desplazamiento hacia el destino.
             double hipotenusa = Math.Sqrt((finalPosition.GetX() - currentPosition.GetX()) * (finalPosition.GetX() - currentPosition.GetX()) + (finalPosition.GetY() - currentPosition.GetY()) * (finalPosition.GetY() - currentPosition.GetY()));
             if (hipotenusa == 0) return; // Ya está en destino
             double coseno = (finalPosition.GetX() - currentPosition.GetX()) / hipotenusa;
             double seno = (finalPosition.GetY() - currentPosition.GetY()) / hipotenusa;
 
-            //Caculamos la nueva posición del vuelo
+            // Calcula la nueva posición siguiendo la trayectoria.
             double x = currentPosition.GetX() + distancia * coseno;
             double y = currentPosition.GetY() + distancia * seno;
 
             Position nextPosition = new Position(x, y);
 
-            // Modificar MoverVuelo para que no se pase del destino
+            // Si el siguiente paso alcanza o supera el destino, fija la posición final.
             if (currentPosition.Distancia(nextPosition) < hipotenusa)
                 currentPosition = nextPosition;
             else
@@ -93,13 +93,14 @@ namespace FlightLib
 
         public void Restart()
         {
+            // Reinicia el vuelo a su posición de origen.
             currentPosition = new Position(initialPosition.GetX(), initialPosition.GetY());
         }
 
-        // Método que indica si el vuelo ha llegado a su destino
+        // Indica si el vuelo ya ha alcanzado el destino.
         public bool EstaDestino()
         {
-            // Usar distancia en vez de comparar referencias
+            // Usar distancia evita depender de si ambas posiciones son la misma referencia.
             return currentPosition.Distancia(finalPosition) < 1e-6;
         }
 
@@ -109,13 +110,13 @@ namespace FlightLib
             return EstaDestino();
         }
 
-        // Método para calcular la distancia a otro plan de vuelo
+        // Calcula la distancia actual a otro vuelo.
         public double Distance(FlightPlan plan)
         {
             return this.currentPosition.Distancia(plan.currentPosition);
         }
 
-        // Detecta conflicto cuando los vuelos están más cerca de la distancia de seguridad
+        // Detecta conflicto cuando la separación es menor que la distancia de seguridad.
         public bool Conflicto(FlightPlan b, double distanciaSeguridad)
         {
             bool conclicto = false;
@@ -127,7 +128,7 @@ namespace FlightLib
         }
 
         public void EscribeConsola()
-        // escribe en consola los datos del plan de vuelo
+        // Escribe en consola un resumen del estado del vuelo.
         {
             Console.WriteLine("******************************");
             Console.WriteLine("Datos del vuelo: ");

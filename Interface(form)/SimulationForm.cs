@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Text;
 using System.Windows.Forms;
 using FlightLib;
 
@@ -8,6 +9,7 @@ namespace Interface_form_
 {
     public partial class SimulationForm : Form
     {
+        // Datos compartidos que describen la simulación activa.
         private readonly FlightPlanList _flightPlans;
         private readonly double _cycleTime;
         private readonly double _securityDistance;
@@ -22,7 +24,7 @@ namespace Interface_form_
             _securityDistance = securityDistance;
             panel1.Paint += panel1_Paint;
 
-            // Initialize the simulation timer
+            // Temporizador para ejecutar automáticamente los mismos pasos del botón Cycle.
             simulationTimer = new Timer();
             simulationTimer.Interval = (int)(_cycleTime * 1000); // Convert seconds to milliseconds
             simulationTimer.Tick += timer1_Tick;
@@ -30,6 +32,7 @@ namespace Interface_form_
 
         private void SimulationForm_Load(object sender, EventArgs e)
         {
+            // Crea un icono por vuelo y lo sitúa en la posición inicial del plan.
             flights = new PictureBox[_flightPlans.getnum()];
             int i = 0;
             while (i < _flightPlans.getnum())
@@ -47,8 +50,7 @@ namespace Interface_form_
 
                 p.Location = new Point(x, y);
                 p.SizeMode = PictureBoxSizeMode.StretchImage;
-                Bitmap image = new Bitmap("Punto.png");
-                p.Image = (Image)image;
+                p.Image = CreateFlightMarkerImage();
 
                 p.Tag = i;
                 p.Click += new System.EventHandler(this.flightInfo);
@@ -57,13 +59,14 @@ namespace Interface_form_
                 flights[i] = p;
                 i++;
             }
-            // Envía los controles al fondo para que el dibujo quede encima
+            // Envía los iconos al fondo para que las trayectorias y elipses se dibujen encima.
             foreach (Control c in panel1.Controls)
             {
                 c.SendToBack();
             }
         }
 
+        // Abre el detalle del vuelo representado por el icono pulsado.
         private void flightInfo(object sender, EventArgs e)
         {
             PictureBox p = (PictureBox)sender;
@@ -75,21 +78,8 @@ namespace Interface_form_
 
         private void cyclebtn_Click(object sender, EventArgs e)
         {
-            for (int i = 0; i < _flightPlans.getnum(); i++)
-            {
-                FlightPlan flight = _flightPlans.GetFlightPlan(i);
-                flight.Mover(_cycleTime);
-
-                Position currentPosition = flight.GetCurrentPosition();
-                int x = (int)currentPosition.GetX() - flights[i].Width / 2;
-                int y = panel1.Height - (int)currentPosition.GetY() - flights[i].Height / 2;
-
-                flights[i].Location = new Point(x, y);
-            }
-            panel1.Invalidate();
-
-            // Comprobar conflictos después de mover los vuelos
-            CheckConflicts();
+            // Ejecuta un único ciclo manual: mover, refrescar pantalla y revisar conflictos.
+            MoveFlightsOneCycle();
         }
 
         private void panel1_Paint(object sender, PaintEventArgs e)
@@ -119,7 +109,7 @@ namespace Interface_form_
                     float ellipseX = centerX - radius;
                     float ellipseY = centerY - radius;
 
-                    // Dibuja el círculo de seguridad
+                    // Dibuja la distancia de seguridad centrada sobre el avión.
                     e.Graphics.DrawEllipse(circlePen, ellipseX, ellipseY, radius * 2, radius * 2);
                 }
             }
@@ -128,26 +118,13 @@ namespace Interface_form_
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            for (int i = 0; i < _flightPlans.getnum(); i++)
-            {
-                FlightPlan flight = _flightPlans.GetFlightPlan(i);
-                flight.Mover(_cycleTime);
-
-                Position currentPosition = flight.GetCurrentPosition();
-                int x = (int)currentPosition.GetX() - flights[i].Width / 2;
-                int y = panel1.Height - (int)currentPosition.GetY() - flights[i].Height / 2;
-
-                flights[i].Location = new Point(x, y);
-            }
-            panel1.Invalidate();
-
-            // Comprobar conflictos después de mover los vuelos
-            CheckConflicts();
+            // Repite automáticamente el mismo avance que realiza el botón Cycle.
+            MoveFlightsOneCycle();
         }
 
         private void startbtn_Click(object sender, EventArgs e)
         {
-            // Check for predicted conflicts before starting
+            // Antes de iniciar la simulación automática, comprueba conflictos previstos.
             int numFlights = _flightPlans.getnum();
             bool conflictPredicted = false;
             int conflictA = -1, conflictB = -1;
@@ -181,7 +158,7 @@ namespace Interface_form_
 
                 if (result == DialogResult.Yes)
                 {
-                    // Try to resolve by adjusting the speed of the second flight
+                    // Intenta resolver el conflicto reduciendo la velocidad de uno de los vuelos.
                     bool resolved = ResolveConflictBySpeed(_flightPlans.GetFlightPlan(conflictA), _flightPlans.GetFlightPlan(conflictB), _securityDistance);
                     if (resolved)
                     {
@@ -200,14 +177,14 @@ namespace Interface_form_
                             MessageBoxIcon.Error);
                     }
                 }
-                // If No, continue as usual
+                // Si el usuario responde No, la simulación continúa tal cual.
             }
 
             simulationTimer.Interval = (int)(_cycleTime * 1000); // Update interval in case _cycleTime changed
             simulationTimer.Start();
         }
 
-        // Helper: Try to resolve conflict by reducing the speed of flight b
+        // Reduce progresivamente la velocidad de b hasta que deje de predecirse conflicto.
         private bool ResolveConflictBySpeed(FlightPlan a, FlightPlan b, double securityDistance)
         {
             double originalSpeed = b.GetVelocidad();
@@ -233,11 +210,19 @@ namespace Interface_form_
 
         private void infobtn_Click(object sender, EventArgs e)
         {
-            FlightGrid form = new FlightGrid(_flightPlans);
-            form.ShowDialog(this);
+            // Abre una vista tabular para inspeccionar distancias y editar velocidades.
+            using (FlightGrid form = new FlightGrid(_flightPlans))
+            {
+                if (form.ShowDialog(this) == DialogResult.OK && form.SpeedsUpdated)
+                {
+                    // Requisito v1: al cambiar velocidades se reinicia la simulación
+                    // en posiciones iniciales para volver a verificar conflicto.
+                    RestartSimulationAfterSpeedChange();
+                }
+            }
         }
 
-        // Método para comprobar conflictos entre todos los pares de vuelos
+        // Revisa si algún par de vuelos está actualmente por debajo de la distancia de seguridad.
         private void CheckConflicts()
         {
             int numFlights = _flightPlans.getnum();
@@ -264,6 +249,7 @@ namespace Interface_form_
 
         private void conflictbtn_Click(object sender, EventArgs e)
         {
+            // Permite consultar manualmente si habrá conflicto en el futuro.
             int numFlights = _flightPlans.getnum();
             bool conflictPredicted = false;
             string message = "";
@@ -303,25 +289,27 @@ namespace Interface_form_
             Position bStart = b.GetInitialPosition();
             Position bEnd = b.GetFinalPosition();
 
-            // Vector direction
+            // Normaliza la dirección de cada ruta para calcular velocidades coherentes.
             double ax = aEnd.GetX() - aStart.GetX();
             double ay = aEnd.GetY() - aStart.GetY();
             double bx = bEnd.GetX() - bStart.GetX();
             double by = bEnd.GetY() - bStart.GetY();
+            Normalize(ref ax, ref ay);
+            Normalize(ref bx, ref by);
 
-            // Relative velocity
+            // Velocidad relativa de ambos vuelos.
             double vax = ax * a.GetVelocidad();
             double vay = ay * a.GetVelocidad();
             double vbx = bx * b.GetVelocidad();
             double vby = by * b.GetVelocidad();
 
-            // Relative position and velocity
+            // Posición y velocidad relativas.
             double rx = aStart.GetX() - bStart.GetX();
             double ry = aStart.GetY() - bStart.GetY();
             double vx = vax - vbx;
             double vy = vay - vby;
 
-            // Find time t where distance is minimized
+            // Busca el instante futuro en el que la distancia sería mínima.
             double tMin = 0;
             double denom = vx * vx + vy * vy;
             if (denom != 0)
@@ -330,7 +318,7 @@ namespace Interface_form_
                 tMin = Math.Max(0, tMin); // Only future times
             }
 
-            // Positions at tMin
+            // Calcula las posiciones estimadas en ese instante.
             double aX = aStart.GetX() + ax * a.GetVelocidad() * tMin;
             double aY = aStart.GetY() + ay * a.GetVelocidad() * tMin;
             double bX = bStart.GetX() + bx * b.GetVelocidad() * tMin;
@@ -338,6 +326,115 @@ namespace Interface_form_
 
             double dist = Math.Sqrt((aX - bX) * (aX - bX) + (aY - bY) * (aY - bY));
             return dist < securityDistance;
+        }
+
+        private static void Normalize(ref double x, ref double y)
+        {
+            double length = Math.Sqrt(x * x + y * y);
+            if (length == 0)
+            {
+                x = 0;
+                y = 0;
+                return;
+            }
+
+            x /= length;
+            y /= length;
+        }
+
+        private static Bitmap CreateFlightMarkerImage()
+        {
+            Bitmap bitmap = new Bitmap(20, 20);
+            using (Graphics g = Graphics.FromImage(bitmap))
+            using (SolidBrush fillBrush = new SolidBrush(Color.DarkRed))
+            using (Pen borderPen = new Pen(Color.White, 2))
+            {
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.Clear(Color.Transparent);
+                g.FillEllipse(fillBrush, 2, 2, 16, 16);
+                g.DrawEllipse(borderPen, 2, 2, 16, 16);
+            }
+
+            return bitmap;
+        }
+
+        private void MoveFlightsOneCycle()
+        {
+            for (int i = 0; i < _flightPlans.getnum(); i++)
+            {
+                FlightPlan flight = _flightPlans.GetFlightPlan(i);
+                flight.Mover(_cycleTime);
+            }
+
+            UpdateVisualPositionsFromCurrentState();
+            // Comprobar conflictos después de mover los vuelos.
+            CheckConflicts();
+        }
+
+        private void UpdateVisualPositionsFromCurrentState()
+        {
+            for (int i = 0; i < _flightPlans.getnum(); i++)
+            {
+                Position currentPosition = _flightPlans.GetFlightPlan(i).GetCurrentPosition();
+                int x = (int)currentPosition.GetX() - flights[i].Width / 2;
+                int y = panel1.Height - (int)currentPosition.GetY() - flights[i].Height / 2;
+                flights[i].Location = new Point(x, y);
+            }
+
+            panel1.Invalidate();
+        }
+
+        private void RestartSimulationAfterSpeedChange()
+        {
+            simulationTimer.Stop();
+
+            for (int i = 0; i < _flightPlans.getnum(); i++)
+            {
+                _flightPlans.GetFlightPlan(i).Restart();
+            }
+
+            UpdateVisualPositionsFromCurrentState();
+
+            if (TryBuildFutureConflictMessage(out string message))
+            {
+                MessageBox.Show(
+                    "Se han actualizado las velocidades y se ha reiniciado la simulación.\n" + message,
+                    "Velocidades aplicadas",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            else
+            {
+                MessageBox.Show(
+                    "Se han actualizado las velocidades y se ha reiniciado la simulación.\nNo se predicen conflictos futuros.",
+                    "Velocidades aplicadas",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+        }
+
+        private bool TryBuildFutureConflictMessage(out string message)
+        {
+            int numFlights = _flightPlans.getnum();
+            StringBuilder builder = new StringBuilder();
+            bool predicted = false;
+
+            for (int i = 0; i < numFlights; i++)
+            {
+                FlightPlan a = _flightPlans.GetFlightPlan(i);
+                for (int j = i + 1; j < numFlights; j++)
+                {
+                    FlightPlan b = _flightPlans.GetFlightPlan(j);
+                    if (WillFlightsConflict(a, b, _securityDistance))
+                    {
+                        builder.AppendLine($"Se predice conflicto entre los vuelos {a.GetId()} y {b.GetId()}.");
+                        predicted = true;
+                    }
+                }
+            }
+
+            message = builder.ToString().Trim();
+            return predicted;
         }
     }
 }
