@@ -24,9 +24,13 @@ namespace Interface_form_
             InitializeComponent();
             flightplans = _flightPlans;
 
+            // Bloque preparado para merges: quitar/suscribir evita dobles enlaces
+            // si en otra rama se conecta también desde Designer o constructor.
             // Mantiene la consulta clásica mediante selección manual de dos filas.
+            acceptbtn.Click -= Acceptbtn_Click;
             acceptbtn.Click += Acceptbtn_Click;
             // Al pulsar una fila se abre el detalle de distancia del vuelo seleccionado.
+            Finfo.CellClick -= Finfo_CellClick;
             Finfo.CellClick += Finfo_CellClick;
 
             // Botón adicional para aplicar velocidades editadas y cerrar el formulario.
@@ -38,6 +42,7 @@ namespace Interface_form_
                 Location = new Point(654, 195),
                 UseVisualStyleBackColor = true
             };
+            applySpeedsButton.Click -= ApplySpeedsButton_Click;
             applySpeedsButton.Click += ApplySpeedsButton_Click;
             Controls.Add(applySpeedsButton);
         }

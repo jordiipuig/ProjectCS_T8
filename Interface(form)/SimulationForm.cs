@@ -22,11 +22,14 @@ namespace Interface_form_
             _flightPlans = flightPlans;
             _cycleTime = cycleTime;
             _securityDistance = securityDistance;
+            // Bloque preparado para merges: evita suscripciones duplicadas.
+            panel1.Paint -= panel1_Paint;
             panel1.Paint += panel1_Paint;
 
             // Temporizador para ejecutar automáticamente los mismos pasos del botón Cycle.
             simulationTimer = new Timer();
             simulationTimer.Interval = (int)(_cycleTime * 1000); // Convert seconds to milliseconds
+            simulationTimer.Tick -= timer1_Tick;
             simulationTimer.Tick += timer1_Tick;
         }
 
