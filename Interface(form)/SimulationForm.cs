@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Text;
 using System.Windows.Forms;
 using FlightLib;
 
@@ -21,11 +22,14 @@ namespace Interface_form_
             _flightPlans = flightPlans;
             _cycleTime = cycleTime;
             _securityDistance = securityDistance;
+            // Bloque preparado para merges: evita suscripciones duplicadas.
+            panel1.Paint -= panel1_Paint;
             panel1.Paint += panel1_Paint;
 
             // Temporizador para ejecutar automáticamente los mismos pasos del botón Cycle.
             simulationTimer = new Timer();
             simulationTimer.Interval = (int)(_cycleTime * 1000); // Convert seconds to milliseconds
+            simulationTimer.Tick -= timer1_Tick;
             simulationTimer.Tick += timer1_Tick;
         }
 
@@ -78,6 +82,7 @@ namespace Interface_form_
         private void cyclebtn_Click(object sender, EventArgs e)
         {
             // Ejecuta un único ciclo manual: mover, refrescar pantalla y revisar conflictos.
+            MoveFlightsOneCycle();
             for (int i = 0; i < _flightPlans.getnum(); i++)
             {
                 FlightPlan flight = _flightPlans.GetFlightPlan(i);
@@ -132,6 +137,7 @@ namespace Interface_form_
         private void timer1_Tick(object sender, EventArgs e)
         {
             // Repite automáticamente el mismo avance que realiza el botón Cycle.
+            MoveFlightsOneCycle();
             for (int i = 0; i < _flightPlans.getnum(); i++)
             {
                 FlightPlan flight = _flightPlans.GetFlightPlan(i);
@@ -237,6 +243,16 @@ namespace Interface_form_
 
         private void infobtn_Click(object sender, EventArgs e)
         {
+            // Abre una vista tabular para inspeccionar distancias y editar velocidades.
+            using (FlightGrid form = new FlightGrid(_flightPlans))
+            {
+                if (form.ShowDialog(this) == DialogResult.OK && form.SpeedsUpdated)
+                {
+                    // Requisito v1: al cambiar velocidades se reinicia la simulación
+                    // en posiciones iniciales para volver a verificar conflicto.
+                    RestartSimulationAfterSpeedChange();
+                }
+            }
             // Abre una vista tabular con la información y las distancias entre vuelos.
             FlightGrid form = new FlightGrid(_flightPlans);
             form.ShowDialog(this);
@@ -376,6 +392,85 @@ namespace Interface_form_
             }
 
             return bitmap;
+        }
+
+        private void MoveFlightsOneCycle()
+        {
+            for (int i = 0; i < _flightPlans.getnum(); i++)
+            {
+                FlightPlan flight = _flightPlans.GetFlightPlan(i);
+                flight.Mover(_cycleTime);
+            }
+
+            UpdateVisualPositionsFromCurrentState();
+            // Comprobar conflictos después de mover los vuelos.
+            CheckConflicts();
+        }
+
+        private void UpdateVisualPositionsFromCurrentState()
+        {
+            for (int i = 0; i < _flightPlans.getnum(); i++)
+            {
+                Position currentPosition = _flightPlans.GetFlightPlan(i).GetCurrentPosition();
+                int x = (int)currentPosition.GetX() - flights[i].Width / 2;
+                int y = panel1.Height - (int)currentPosition.GetY() - flights[i].Height / 2;
+                flights[i].Location = new Point(x, y);
+            }
+
+            panel1.Invalidate();
+        }
+
+        private void RestartSimulationAfterSpeedChange()
+        {
+            simulationTimer.Stop();
+
+            for (int i = 0; i < _flightPlans.getnum(); i++)
+            {
+                _flightPlans.GetFlightPlan(i).Restart();
+            }
+
+            UpdateVisualPositionsFromCurrentState();
+
+            if (TryBuildFutureConflictMessage(out string message))
+            {
+                MessageBox.Show(
+                    "Se han actualizado las velocidades y se ha reiniciado la simulación.\n" + message,
+                    "Velocidades aplicadas",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            else
+            {
+                MessageBox.Show(
+                    "Se han actualizado las velocidades y se ha reiniciado la simulación.\nNo se predicen conflictos futuros.",
+                    "Velocidades aplicadas",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+        }
+
+        private bool TryBuildFutureConflictMessage(out string message)
+        {
+            int numFlights = _flightPlans.getnum();
+            StringBuilder builder = new StringBuilder();
+            bool predicted = false;
+
+            for (int i = 0; i < numFlights; i++)
+            {
+                FlightPlan a = _flightPlans.GetFlightPlan(i);
+                for (int j = i + 1; j < numFlights; j++)
+                {
+                    FlightPlan b = _flightPlans.GetFlightPlan(j);
+                    if (WillFlightsConflict(a, b, _securityDistance))
+                    {
+                        builder.AppendLine($"Se predice conflicto entre los vuelos {a.GetId()} y {b.GetId()}.");
+                        predicted = true;
+                    }
+                }
+            }
+
+            message = builder.ToString().Trim();
+            return predicted;
         }
     }
 }

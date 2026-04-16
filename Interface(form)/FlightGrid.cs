@@ -9,22 +9,42 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using FlightLib;
+using System.Globalization;
 
 namespace Interface_form_
 {
     public partial class FlightGrid : Form
     {
         private readonly FlightPlanList flightplans;
+        private readonly Button applySpeedsButton;
+        public bool SpeedsUpdated { get; private set; }
 
         public FlightGrid(FlightPlanList _flightPlans)
         {
             InitializeComponent();
             flightplans = _flightPlans;
 
+            // Bloque preparado para merges: quitar/suscribir evita dobles enlaces
+            // si en otra rama se conecta también desde Designer o constructor.
             // Mantiene la consulta clásica mediante selección manual de dos filas.
+            acceptbtn.Click -= Acceptbtn_Click;
             acceptbtn.Click += Acceptbtn_Click;
             // Al pulsar una fila se abre el detalle de distancia del vuelo seleccionado.
+            Finfo.CellClick -= Finfo_CellClick;
             Finfo.CellClick += Finfo_CellClick;
+
+            // Botón adicional para aplicar velocidades editadas y cerrar el formulario.
+            applySpeedsButton = new Button
+            {
+                Name = "applySpeedsButton",
+                Text = "Apply Speeds + Restart",
+                Size = new Size(200, 47),
+                Location = new Point(654, 195),
+                UseVisualStyleBackColor = true
+            };
+            applySpeedsButton.Click -= ApplySpeedsButton_Click;
+            applySpeedsButton.Click += ApplySpeedsButton_Click;
+            Controls.Add(applySpeedsButton);
         }
 
         private void FlightGrid_Load(object sender, EventArgs e)
@@ -36,6 +56,9 @@ namespace Interface_form_
             Finfo.Columns[0].Name = "ID";
             Finfo.Columns[1].Name = "Posición Actual u";
             Finfo.Columns[2].Name = "Velocidad u/s";
+            Finfo.Columns[0].ReadOnly = true;
+            Finfo.Columns[1].ReadOnly = true;
+            Finfo.Columns[2].ReadOnly = false;
 
             // Llena el DataGridView con el estado de cada vuelo disponible.
             int numFlights = flightplans.getnum();
@@ -55,10 +78,17 @@ namespace Interface_form_
             Finfo.RowHeadersVisible = false;
             Finfo.MultiSelect = true;
             Finfo.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            Finfo.EditMode = DataGridViewEditMode.EditOnEnter;
         }
 
         private void Finfo_CellClick(object sender, DataGridViewCellEventArgs e)
         {
+            // Si se pulsa la columna velocidad, el usuario quiere editar y no ver distancias.
+            if (e.ColumnIndex == 2)
+            {
+                return;
+            }
+
             if (e.RowIndex < 0 || flightplans.getnum() < 2)
             {
                 return;
@@ -108,6 +138,43 @@ namespace Interface_form_
             }
 
             return null;
+        }
+
+        private void ApplySpeedsButton_Click(object sender, EventArgs e)
+        {
+            // Confirma la edición en curso del DataGridView antes de validar.
+            Finfo.EndEdit();
+
+            for (int i = 0; i < flightplans.getnum(); i++)
+            {
+                DataGridViewCell speedCell = Finfo.Rows[i].Cells[2];
+                string speedText = Convert.ToString(speedCell.Value);
+
+                if (!TryParsePositiveDouble(speedText, out double speed))
+                {
+                    MessageBox.Show(
+                        $"La velocidad de la fila {i + 1} no es válida. Introduce un valor numérico mayor que 0.",
+                        "Error de validación",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Actualiza el modelo compartido para que la simulación use los nuevos valores.
+                flightplans.GetFlightPlan(i).SetVelocidad(speed);
+                speedCell.Value = speed.ToString("F2");
+            }
+
+            SpeedsUpdated = true;
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+
+        private static bool TryParsePositiveDouble(string text, out double value)
+        {
+            return (double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value) ||
+                    double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value))
+                   && value > 0;
         }
     }
 }
