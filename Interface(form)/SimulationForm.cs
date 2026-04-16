@@ -83,21 +83,6 @@ namespace Interface_form_
         {
             // Ejecuta un único ciclo manual: mover, refrescar pantalla y revisar conflictos.
             MoveFlightsOneCycle();
-            for (int i = 0; i < _flightPlans.getnum(); i++)
-            {
-                FlightPlan flight = _flightPlans.GetFlightPlan(i);
-                flight.Mover(_cycleTime);
-
-                Position currentPosition = flight.GetCurrentPosition();
-                int x = (int)currentPosition.GetX() - flights[i].Width / 2;
-                int y = panel1.Height - (int)currentPosition.GetY() - flights[i].Height / 2;
-
-                flights[i].Location = new Point(x, y);
-            }
-            panel1.Invalidate();
-
-            // Comprobar conflictos después de mover los vuelos
-            CheckConflicts();
         }
 
         private void panel1_Paint(object sender, PaintEventArgs e)
@@ -138,21 +123,6 @@ namespace Interface_form_
         {
             // Repite automáticamente el mismo avance que realiza el botón Cycle.
             MoveFlightsOneCycle();
-            for (int i = 0; i < _flightPlans.getnum(); i++)
-            {
-                FlightPlan flight = _flightPlans.GetFlightPlan(i);
-                flight.Mover(_cycleTime);
-
-                Position currentPosition = flight.GetCurrentPosition();
-                int x = (int)currentPosition.GetX() - flights[i].Width / 2;
-                int y = panel1.Height - (int)currentPosition.GetY() - flights[i].Height / 2;
-
-                flights[i].Location = new Point(x, y);
-            }
-            panel1.Invalidate();
-
-            // Comprobar conflictos después de mover los vuelos
-            CheckConflicts();
         }
 
         private void startbtn_Click(object sender, EventArgs e)
@@ -253,9 +223,6 @@ namespace Interface_form_
                     RestartSimulationAfterSpeedChange();
                 }
             }
-            // Abre una vista tabular con la información y las distancias entre vuelos.
-            FlightGrid form = new FlightGrid(_flightPlans);
-            form.ShowDialog(this);
         }
 
         // Revisa si algún par de vuelos está actualmente por debajo de la distancia de seguridad.
@@ -320,62 +287,50 @@ namespace Interface_form_
 
         private bool WillFlightsConflict(FlightPlan a, FlightPlan b, double securityDistance)
         {
-            Position aStart = a.GetInitialPosition();
-            Position aEnd = a.GetFinalPosition();
-            Position bStart = b.GetInitialPosition();
-            Position bEnd = b.GetFinalPosition();
+            // Simulación predictiva discreta desde el origen de ambos vuelos.
+            FlightPlan aSim = BuildPredictionClone(a);
+            FlightPlan bSim = BuildPredictionClone(b);
+            double predictionStepSeconds = Math.Max(0.1, Math.Min(1.0, _cycleTime));
+            const int maxIterations = 200000;
 
-            // Normaliza la dirección de cada ruta para calcular velocidades coherentes.
-            double ax = aEnd.GetX() - aStart.GetX();
-            double ay = aEnd.GetY() - aStart.GetY();
-            double bx = bEnd.GetX() - bStart.GetX();
-            double by = bEnd.GetY() - bStart.GetY();
-            Normalize(ref ax, ref ay);
-            Normalize(ref bx, ref by);
-
-            // Velocidad relativa de ambos vuelos.
-            double vax = ax * a.GetVelocidad();
-            double vay = ay * a.GetVelocidad();
-            double vbx = bx * b.GetVelocidad();
-            double vby = by * b.GetVelocidad();
-
-            // Posición y velocidad relativas.
-            double rx = aStart.GetX() - bStart.GetX();
-            double ry = aStart.GetY() - bStart.GetY();
-            double vx = vax - vbx;
-            double vy = vay - vby;
-
-            // Busca el instante futuro en el que la distancia sería mínima.
-            double tMin = 0;
-            double denom = vx * vx + vy * vy;
-            if (denom != 0)
+            for (int i = 0; i < maxIterations; i++)
             {
-                tMin = -(rx * vx + ry * vy) / denom;
-                tMin = Math.Max(0, tMin); // Only future times
+                if (aSim.Conflicto(bSim, securityDistance))
+                {
+                    return true;
+                }
+
+                bool aArrived = aSim.EstaDestino();
+                bool bArrived = bSim.EstaDestino();
+                if (aArrived && bArrived)
+                {
+                    return false;
+                }
+
+                if (!aArrived)
+                {
+                    aSim.Mover(predictionStepSeconds);
+                }
+                if (!bArrived)
+                {
+                    bSim.Mover(predictionStepSeconds);
+                }
             }
 
-            // Calcula las posiciones estimadas en ese instante.
-            double aX = aStart.GetX() + ax * a.GetVelocidad() * tMin;
-            double aY = aStart.GetY() + ay * a.GetVelocidad() * tMin;
-            double bX = bStart.GetX() + bx * b.GetVelocidad() * tMin;
-            double bY = bStart.GetY() + by * b.GetVelocidad() * tMin;
-
-            double dist = Math.Sqrt((aX - bX) * (aX - bX) + (aY - bY) * (aY - bY));
-            return dist < securityDistance;
+            return false;
         }
 
-        private static void Normalize(ref double x, ref double y)
+        private static FlightPlan BuildPredictionClone(FlightPlan source)
         {
-            double length = Math.Sqrt(x * x + y * y);
-            if (length == 0)
-            {
-                x = 0;
-                y = 0;
-                return;
-            }
-
-            x /= length;
-            y /= length;
+            Position initial = source.GetInitialPosition();
+            Position destination = source.GetFinalPosition();
+            return new FlightPlan(
+                source.GetId(),
+                initial.GetX(),
+                initial.GetY(),
+                destination.GetX(),
+                destination.GetY(),
+                source.GetVelocidad());
         }
 
         private static Bitmap CreateFlightMarkerImage()
