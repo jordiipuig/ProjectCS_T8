@@ -14,7 +14,7 @@ namespace Interface_form_
         private readonly double _cycleTime;
         private readonly double _securityDistance;
         PictureBox[] flights;
-        private Timer simulationTimer;
+        private FlightGrid _flightGridForm;
 
         public SimulationForm(FlightPlanList flightPlans, double cycleTime, double securityDistance)
         {
@@ -27,10 +27,10 @@ namespace Interface_form_
             panel1.Paint += panel1_Paint;
 
             // Temporizador para ejecutar automáticamente los mismos pasos del botón Cycle.
-            simulationTimer = new Timer();
-            simulationTimer.Interval = (int)(_cycleTime * 1000); // Convert seconds to milliseconds
-            simulationTimer.Tick -= timer1_Tick;
-            simulationTimer.Tick += timer1_Tick;
+            timer1.Stop();
+            timer1.Interval = Math.Max(1, (int)(_cycleTime * 1000)); // Convert seconds to milliseconds
+            timer1.Tick -= timer1_Tick;
+            timer1.Tick += timer1_Tick;
         }
 
         private void SimulationForm_Load(object sender, EventArgs e)
@@ -83,21 +83,6 @@ namespace Interface_form_
         {
             // Ejecuta un único ciclo manual: mover, refrescar pantalla y revisar conflictos.
             MoveFlightsOneCycle();
-            for (int i = 0; i < _flightPlans.getnum(); i++)
-            {
-                FlightPlan flight = _flightPlans.GetFlightPlan(i);
-                flight.Mover(_cycleTime);
-
-                Position currentPosition = flight.GetCurrentPosition();
-                int x = (int)currentPosition.GetX() - flights[i].Width / 2;
-                int y = panel1.Height - (int)currentPosition.GetY() - flights[i].Height / 2;
-
-                flights[i].Location = new Point(x, y);
-            }
-            panel1.Invalidate();
-
-            // Comprobar conflictos después de mover los vuelos
-            CheckConflicts();
         }
 
         private void panel1_Paint(object sender, PaintEventArgs e)
@@ -138,21 +123,6 @@ namespace Interface_form_
         {
             // Repite automáticamente el mismo avance que realiza el botón Cycle.
             MoveFlightsOneCycle();
-            for (int i = 0; i < _flightPlans.getnum(); i++)
-            {
-                FlightPlan flight = _flightPlans.GetFlightPlan(i);
-                flight.Mover(_cycleTime);
-
-                Position currentPosition = flight.GetCurrentPosition();
-                int x = (int)currentPosition.GetX() - flights[i].Width / 2;
-                int y = panel1.Height - (int)currentPosition.GetY() - flights[i].Height / 2;
-
-                flights[i].Location = new Point(x, y);
-            }
-            panel1.Invalidate();
-
-            // Comprobar conflictos después de mover los vuelos
-            CheckConflicts();
         }
 
         private void startbtn_Click(object sender, EventArgs e)
@@ -213,8 +183,8 @@ namespace Interface_form_
                 // Si el usuario responde No, la simulación continúa tal cual.
             }
 
-            simulationTimer.Interval = (int)(_cycleTime * 1000); // Update interval in case _cycleTime changed
-            simulationTimer.Start();
+            timer1.Interval = Math.Max(1, (int)(_cycleTime * 1000)); // Update interval in case _cycleTime changed
+            timer1.Start();
         }
 
         // Reduce progresivamente la velocidad de b hasta que deje de predecirse conflicto.
@@ -238,24 +208,40 @@ namespace Interface_form_
 
         private void stopbtn_Click(object sender, EventArgs e)
         {
-            simulationTimer.Stop();
+            timer1.Stop();
         }
 
         private void infobtn_Click(object sender, EventArgs e)
         {
-            // Abre una vista tabular para inspeccionar distancias y editar velocidades.
-            using (FlightGrid form = new FlightGrid(_flightPlans))
+            // Abrir en modo no modal para mantener la simulación visible en todo momento.
+            if (_flightGridForm != null && !_flightGridForm.IsDisposed)
             {
-                if (form.ShowDialog(this) == DialogResult.OK && form.SpeedsUpdated)
-                {
-                    // Requisito v1: al cambiar velocidades se reinicia la simulación
-                    // en posiciones iniciales para volver a verificar conflicto.
-                    RestartSimulationAfterSpeedChange();
-                }
+                _flightGridForm.Focus();
+                return;
             }
-            // Abre una vista tabular con la información y las distancias entre vuelos.
-            FlightGrid form = new FlightGrid(_flightPlans);
-            form.ShowDialog(this);
+
+            _flightGridForm = new FlightGrid(_flightPlans);
+            _flightGridForm.StartPosition = FormStartPosition.Manual;
+            _flightGridForm.Location = new Point(this.Right + 10, this.Top);
+            _flightGridForm.FormClosed += FlightGridForm_FormClosed;
+            _flightGridForm.Show(this);
+        }
+
+        private void FlightGridForm_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            if (_flightGridForm != null && _flightGridForm.SpeedsUpdated)
+            {
+                // Requisito v1: al cambiar velocidades se reinicia la simulación
+                // en posiciones iniciales para volver a verificar conflicto.
+                RestartSimulationAfterSpeedChange();
+            }
+
+            if (_flightGridForm != null)
+            {
+                _flightGridForm.FormClosed -= FlightGridForm_FormClosed;
+                _flightGridForm.Dispose();
+                _flightGridForm = null;
+            }
         }
 
         // Revisa si algún par de vuelos está actualmente por debajo de la distancia de seguridad.
@@ -320,62 +306,50 @@ namespace Interface_form_
 
         private bool WillFlightsConflict(FlightPlan a, FlightPlan b, double securityDistance)
         {
-            Position aStart = a.GetInitialPosition();
-            Position aEnd = a.GetFinalPosition();
-            Position bStart = b.GetInitialPosition();
-            Position bEnd = b.GetFinalPosition();
+            // Simulación predictiva discreta desde el origen de ambos vuelos.
+            FlightPlan aSim = BuildPredictionClone(a);
+            FlightPlan bSim = BuildPredictionClone(b);
+            double predictionStepSeconds = Math.Max(0.1, Math.Min(1.0, _cycleTime));
+            const int maxIterations = 200000;
 
-            // Normaliza la dirección de cada ruta para calcular velocidades coherentes.
-            double ax = aEnd.GetX() - aStart.GetX();
-            double ay = aEnd.GetY() - aStart.GetY();
-            double bx = bEnd.GetX() - bStart.GetX();
-            double by = bEnd.GetY() - bStart.GetY();
-            Normalize(ref ax, ref ay);
-            Normalize(ref bx, ref by);
-
-            // Velocidad relativa de ambos vuelos.
-            double vax = ax * a.GetVelocidad();
-            double vay = ay * a.GetVelocidad();
-            double vbx = bx * b.GetVelocidad();
-            double vby = by * b.GetVelocidad();
-
-            // Posición y velocidad relativas.
-            double rx = aStart.GetX() - bStart.GetX();
-            double ry = aStart.GetY() - bStart.GetY();
-            double vx = vax - vbx;
-            double vy = vay - vby;
-
-            // Busca el instante futuro en el que la distancia sería mínima.
-            double tMin = 0;
-            double denom = vx * vx + vy * vy;
-            if (denom != 0)
+            for (int i = 0; i < maxIterations; i++)
             {
-                tMin = -(rx * vx + ry * vy) / denom;
-                tMin = Math.Max(0, tMin); // Only future times
+                if (aSim.Conflicto(bSim, securityDistance))
+                {
+                    return true;
+                }
+
+                bool aArrived = aSim.EstaDestino();
+                bool bArrived = bSim.EstaDestino();
+                if (aArrived && bArrived)
+                {
+                    return false;
+                }
+
+                if (!aArrived)
+                {
+                    aSim.Mover(predictionStepSeconds);
+                }
+                if (!bArrived)
+                {
+                    bSim.Mover(predictionStepSeconds);
+                }
             }
 
-            // Calcula las posiciones estimadas en ese instante.
-            double aX = aStart.GetX() + ax * a.GetVelocidad() * tMin;
-            double aY = aStart.GetY() + ay * a.GetVelocidad() * tMin;
-            double bX = bStart.GetX() + bx * b.GetVelocidad() * tMin;
-            double bY = bStart.GetY() + by * b.GetVelocidad() * tMin;
-
-            double dist = Math.Sqrt((aX - bX) * (aX - bX) + (aY - bY) * (aY - bY));
-            return dist < securityDistance;
+            return false;
         }
 
-        private static void Normalize(ref double x, ref double y)
+        private static FlightPlan BuildPredictionClone(FlightPlan source)
         {
-            double length = Math.Sqrt(x * x + y * y);
-            if (length == 0)
-            {
-                x = 0;
-                y = 0;
-                return;
-            }
-
-            x /= length;
-            y /= length;
+            Position initial = source.GetInitialPosition();
+            Position destination = source.GetFinalPosition();
+            return new FlightPlan(
+                source.GetId(),
+                initial.GetX(),
+                initial.GetY(),
+                destination.GetX(),
+                destination.GetY(),
+                source.GetVelocidad());
         }
 
         private static Bitmap CreateFlightMarkerImage()
@@ -422,7 +396,8 @@ namespace Interface_form_
 
         private void RestartSimulationAfterSpeedChange()
         {
-            simulationTimer.Stop();
+            bool wasRunning = timer1.Enabled;
+            timer1.Stop();
 
             for (int i = 0; i < _flightPlans.getnum(); i++)
             {
@@ -446,6 +421,11 @@ namespace Interface_form_
                     "Velocidades aplicadas",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
+            }
+
+            if (wasRunning)
+            {
+                timer1.Start();
             }
         }
 
