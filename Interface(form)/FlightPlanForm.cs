@@ -7,6 +7,7 @@ namespace Interface_form_
 {
     public partial class FlightPlanForm : Form
     {
+        // La lista se recibe desde Main para modificar directamente el estado compartido.
         public FlightPlanList _flightplans;
 
         public FlightPlan Flightplan1 { get; set; }
@@ -23,6 +24,7 @@ namespace Interface_form_
 
         private void acceptButton_Click(object sender, EventArgs e)
         {
+            // Lee, valida y construye los dos planes de vuelo introducidos por el usuario.
             string id1 = id1box.Text.Trim();
             string id2 = id2box.Text.Trim();
 
@@ -62,6 +64,7 @@ namespace Interface_form_
 
         private static bool TryParsePoint(string text, out double x, out double y)
         {
+            // Espera coordenadas con formato X,Y.
             x = 0;
             y = 0;
 
@@ -76,11 +79,13 @@ namespace Interface_form_
 
         private static bool TryParsePositiveDouble(string text, out double value)
         {
+            // Reutiliza el parseo decimal y añade la restricción de positividad.
             return TryParseDouble(text, out value) && value > 0;
         }
 
         private static bool TryParseDouble(string text, out double value)
         {
+            // Acepta tanto la configuración regional actual como el formato invariante.
             return double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value) ||
                    double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
         }
@@ -93,6 +98,7 @@ namespace Interface_form_
 
         private void nonConflictbtn_Click(object sender, EventArgs e)
         {
+            // Caso de prueba rápido pensado para no producir conflicto.
             string id1 = "FP-A100";
             string id2 = "FP-B200";
 
@@ -121,6 +127,7 @@ namespace Interface_form_
 
         private void conflictbtn_Click(object sender, EventArgs e)
         {
+            // Caso de prueba rápido pensado para generar conflicto.
             string id1 = "FP-A100";
             string id2 = "FP-B200";
 
@@ -149,6 +156,7 @@ namespace Interface_form_
 
         private void resetbtn_Click(object sender, EventArgs e)
         {
+            // Borra la lista compartida para empezar una prueba desde cero.
             _flightplans.Clear();
             MessageBox.Show("La lista de planes de vuelo ha sido vaciada.", "Reset", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
