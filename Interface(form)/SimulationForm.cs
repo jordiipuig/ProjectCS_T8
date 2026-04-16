@@ -83,6 +83,21 @@ namespace Interface_form_
         {
             // Ejecuta un único ciclo manual: mover, refrescar pantalla y revisar conflictos.
             MoveFlightsOneCycle();
+            for (int i = 0; i < _flightPlans.getnum(); i++)
+            {
+                FlightPlan flight = _flightPlans.GetFlightPlan(i);
+                flight.Mover(_cycleTime);
+
+                Position currentPosition = flight.GetCurrentPosition();
+                int x = (int)currentPosition.GetX() - flights[i].Width / 2;
+                int y = panel1.Height - (int)currentPosition.GetY() - flights[i].Height / 2;
+
+                flights[i].Location = new Point(x, y);
+            }
+            panel1.Invalidate();
+
+            // Comprobar conflictos después de mover los vuelos
+            CheckConflicts();
         }
 
         private void panel1_Paint(object sender, PaintEventArgs e)
@@ -123,6 +138,21 @@ namespace Interface_form_
         {
             // Repite automáticamente el mismo avance que realiza el botón Cycle.
             MoveFlightsOneCycle();
+            for (int i = 0; i < _flightPlans.getnum(); i++)
+            {
+                FlightPlan flight = _flightPlans.GetFlightPlan(i);
+                flight.Mover(_cycleTime);
+
+                Position currentPosition = flight.GetCurrentPosition();
+                int x = (int)currentPosition.GetX() - flights[i].Width / 2;
+                int y = panel1.Height - (int)currentPosition.GetY() - flights[i].Height / 2;
+
+                flights[i].Location = new Point(x, y);
+            }
+            panel1.Invalidate();
+
+            // Comprobar conflictos después de mover los vuelos
+            CheckConflicts();
         }
 
         private void startbtn_Click(object sender, EventArgs e)
@@ -223,6 +253,9 @@ namespace Interface_form_
                     RestartSimulationAfterSpeedChange();
                 }
             }
+            // Abre una vista tabular con la información y las distancias entre vuelos.
+            FlightGrid form = new FlightGrid(_flightPlans);
+            form.ShowDialog(this);
         }
 
         // Revisa si algún par de vuelos está actualmente por debajo de la distancia de seguridad.
