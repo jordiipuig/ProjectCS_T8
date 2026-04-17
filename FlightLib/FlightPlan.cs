@@ -9,43 +9,79 @@ namespace FlightLib
     public class FlightPlan
     {
         // Datos que definen el plan y el estado actual del vuelo.
-        string id; // identificador
+        string id;              // identificador único del vuelo
+        string company;         // compañía aérea operadora (v2)
         Position initialPosition;
-        Position currentPosition; // posicion actual
-        Position finalPosition; // posicion final
+        Position currentPosition; // posición actual
+        Position finalPosition;   // posición final / destino
         double velocidad;
 
-        // Constructores
+        // ── Constructores ────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Constructor v2 completo que incluye la compañía aérea.
+        /// </summary>
+        public FlightPlan(string id, string company, double cpx, double cpy, double fpx, double fpy, double velocidad)
+        {
+            this.id = id;
+            this.company = company;
+            this.initialPosition = new Position(cpx, cpy);
+            this.currentPosition = new Position(cpx, cpy);
+            this.finalPosition   = new Position(fpx, fpy);
+            this.velocidad       = velocidad;
+        }
+
+        /// <summary>
+        /// Constructor v1 sin compañía — la establece a cadena vacía para compatibilidad.
+        /// </summary>
         public FlightPlan(string id, double cpx, double cpy, double fpx, double fpy, double velocidad)
         {
             this.id = id;
+            this.company = string.Empty;
             this.initialPosition = new Position(cpx, cpy);
             this.currentPosition = new Position(cpx, cpy);
-            this.finalPosition = new Position(fpx, fpy);
-            this.velocidad = velocidad;
+            this.finalPosition   = new Position(fpx, fpy);
+            this.velocidad       = velocidad;
         }
 
+        /// <summary>
+        /// Constructor con objetos Position — compatibilidad v1.
+        /// </summary>
         public FlightPlan(string id, Position initialPosition, Position currentPosition, Position finalPosition, double velocidad)
         {
             this.id = id;
+            this.company = string.Empty;
             this.initialPosition = initialPosition;
             this.currentPosition = currentPosition;
-            this.finalPosition = finalPosition;
-            this.velocidad = velocidad;
+            this.finalPosition   = finalPosition;
+            this.velocidad       = velocidad;
         }
 
+        /// <summary>
+        /// Constructor por defecto — todos los campos a valores neutros.
+        /// </summary>
         public FlightPlan()
         {
             id = string.Empty;
+            company = string.Empty;
             initialPosition = new Position(0, 0);
             currentPosition = new Position(0, 0);
-            finalPosition = new Position(0, 0);
+            finalPosition   = new Position(0, 0);
             velocidad = 0;
         }
 
-        // Métodos de acceso para poder consultar y modificar el vuelo desde la UI.
+        // ── Métodos de acceso ────────────────────────────────────────────────────
+
+        // Permiten consultar y modificar cada campo del vuelo desde la capa de UI.
+
         public string GetId() { return id; }
         public void SetId(string value) { id = value; }
+
+        /// <summary>Devuelve la compañía aérea del vuelo.</summary>
+        public string GetCompany() { return company; }
+
+        /// <summary>Establece la compañía aérea del vuelo.</summary>
+        public void SetCompany(string value) { company = value; }
 
         public Position GetInitialPosition() { return initialPosition; }
         public void SetInitialPosition(Position value) { initialPosition = value; }

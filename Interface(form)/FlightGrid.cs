@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System;
 using System.Windows.Forms;
 using FlightLib;
 
@@ -21,40 +13,43 @@ namespace Interface_form_
             InitializeComponent();
             flightplans = _flightPlans;
 
-            // Mantiene la consulta clásica mediante selección manual de dos filas.
+            // Botón Accept — calcula la distancia entre las dos filas seleccionadas.
             acceptbtn.Click += Acceptbtn_Click;
-            // Al pulsar una fila se abre el detalle de distancia del vuelo seleccionado.
+
+            // Clic en una fila — abre el detalle de distancia con el vuelo más cercano.
             Finfo.CellClick += Finfo_CellClick;
         }
 
         private void FlightGrid_Load(object sender, EventArgs e)
         {
-            // Configura las columnas del DataGridView que resume el estado actual.
+            // Configurar las columnas del DataGridView (v2: 4 columnas con Empresa).
             Finfo.Columns.Clear();
             Finfo.Rows.Clear();
-            Finfo.ColumnCount = 3;
+            Finfo.ColumnCount = 4;
             Finfo.Columns[0].Name = "ID";
-            Finfo.Columns[1].Name = "Posición Actual u";
-            Finfo.Columns[2].Name = "Velocidad u/s";
+            Finfo.Columns[1].Name = "Empresa";          // nuevo en v2
+            Finfo.Columns[2].Name = "Posición Actual u";
+            Finfo.Columns[3].Name = "Velocidad u/s";
 
-            // Llena el DataGridView con el estado de cada vuelo disponible.
+            // Llenar el DataGridView con el estado actual de cada vuelo.
             int numFlights = flightplans.getnum();
             for (int i = 0; i < numFlights; i++)
             {
-                FlightPlan plan = flightplans.GetFlightPlan(i);
-                string id = plan.GetId();
-                Position pos = plan.GetCurrentPosition();
-                string posStr = $"({pos.GetX():F2}, {pos.GetY():F2})";
-                double velocidad = plan.GetVelocidad();
+                FlightPlan plan   = flightplans.GetFlightPlan(i);
+                string id         = plan.GetId();
+                string company    = plan.GetCompany();  // nuevo en v2
+                Position pos      = plan.GetCurrentPosition();
+                string posStr     = "(" + pos.GetX().ToString("F2") + ", " + pos.GetY().ToString("F2") + ")";
+                double velocidad  = plan.GetVelocidad();
 
-                Finfo.Rows.Add(id, posStr, velocidad);
+                Finfo.Rows.Add(id, company, posStr, velocidad);
             }
 
-            Finfo.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
-            Finfo.ColumnHeadersVisible = true;
-            Finfo.RowHeadersVisible = false;
-            Finfo.MultiSelect = true;
-            Finfo.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            Finfo.AutoSizeColumnsMode   = DataGridViewAutoSizeColumnsMode.AllCells;
+            Finfo.ColumnHeadersVisible  = true;
+            Finfo.RowHeadersVisible     = false;
+            Finfo.MultiSelect           = true;
+            Finfo.SelectionMode         = DataGridViewSelectionMode.FullRowSelect;
         }
 
         private void Finfo_CellClick(object sender, DataGridViewCellEventArgs e)
@@ -65,7 +60,7 @@ namespace Interface_form_
             }
 
             FlightPlan selectedFlight = flightplans.GetFlightPlan(e.RowIndex);
-            FlightPlan otherFlight = GetOtherFlight(e.RowIndex);
+            FlightPlan otherFlight    = GetOtherFlight(e.RowIndex);
 
             if (selectedFlight == null || otherFlight == null)
             {
@@ -97,6 +92,9 @@ namespace Interface_form_
             }
         }
 
+        /// <summary>
+        /// Devuelve el primer vuelo de la lista distinto del índice indicado.
+        /// </summary>
         private FlightPlan GetOtherFlight(int selectedIndex)
         {
             for (int i = 0; i < flightplans.getnum(); i++)
@@ -106,7 +104,6 @@ namespace Interface_form_
                     return flightplans.GetFlightPlan(i);
                 }
             }
-
             return null;
         }
     }
