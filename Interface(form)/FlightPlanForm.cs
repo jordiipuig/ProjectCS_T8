@@ -113,9 +113,9 @@ namespace Interface_form_
 
         private void nonConflictbtn_Click(object sender, EventArgs e)
         {
-            // Dos vuelos horizontales paralelos — no se cruzan nunca.
-            Flightplan1 = new FlightPlan("IBE001", "Iberia",  100, 300, 1100, 300, 100);
-            Flightplan2 = new FlightPlan("VLG002", "Vueling", 100, 600, 1100, 600, 100);
+            // Dos vuelos horizontales paralelos — nunca se cruzan.
+            Flightplan1 = new FlightPlan("IBE001", "Iberia",  100, 300, 1100, 300, 300);
+            Flightplan2 = new FlightPlan("VLG002", "Vueling", 100, 600, 1100, 600, 300);
 
             _flightplans.Clear();
             _flightplans.AddFlightPlan(Flightplan1);
@@ -127,9 +127,13 @@ namespace Interface_form_
 
         private void conflictbtn_Click(object sender, EventArgs e)
         {
-            // IBE001 horizontal + VLG002 vertical: se cruzan en (600, 450).
-            Flightplan1 = new FlightPlan("IBE001", "Iberia",  100, 450, 1100, 450, 100);
-            Flightplan2 = new FlightPlan("VLG002", "Vueling", 600, 800,  600, 100, 100);
+            // IBE001 horizontal + VLG002 vertical — se cruzan en (600, 450).
+            // Velocidades proporcionales a la distancia al cruce para que lleguen al mismo tiempo:
+            //   IBE001: 500 unidades al cruce → velocidad 500
+            //   VLG002: 350 unidades al cruce → velocidad 350
+            // Ambos llegan en exactamente 60 ciclos (cycleTime=1 min).
+            Flightplan1 = new FlightPlan("IBE001", "Iberia",  100, 450, 1100, 450, 500);
+            Flightplan2 = new FlightPlan("VLG002", "Vueling", 600, 800,  600, 100, 350);
 
             _flightplans.Clear();
             _flightplans.AddFlightPlan(Flightplan1);

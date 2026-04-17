@@ -476,9 +476,11 @@ namespace Interface_form_
         /// </summary>
         private bool WillFlightsConflict(FlightPlan a, FlightPlan b, double securityDistance)
         {
-            Position aStart = a.GetInitialPosition();
+            // Usar posición ACTUAL para predecir desde el momento presente,
+            // no desde el origen — así Check Conflict funciona también a mitad de simulación.
+            Position aStart = a.GetCurrentPosition();
             Position aEnd   = a.GetFinalPosition();
-            Position bStart = b.GetInitialPosition();
+            Position bStart = b.GetCurrentPosition();
             Position bEnd   = b.GetFinalPosition();
 
             double ax = aEnd.GetX() - aStart.GetX();
