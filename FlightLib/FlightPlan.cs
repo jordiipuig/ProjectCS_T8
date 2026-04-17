@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,25 +6,35 @@ using System.Threading.Tasks;
 
 namespace FlightLib
 {
+    // ============================================================
+    // FlightPlan — Representa un plan de vuelo individual.
+    // Almacena el identificador, la compañía aérea, las posiciones
+    // (inicial, actual y destino) y la velocidad de crucero.
+    // Proporciona métodos para mover el avión ciclo a ciclo y para
+    // detectar conflictos con otros vuelos.
+    // ============================================================
     public class FlightPlan
     {
-        // Datos que definen el plan y el estado actual del vuelo.
-        string id;              // identificador único del vuelo
-        string company;         // compañía aérea operadora (v2)
-        Position initialPosition;
-        Position currentPosition; // posición actual
-        Position finalPosition;   // posición final / destino
-        double velocidad;
+        // ── Campos de datos ──────────────────────────────────────────────────────
+
+        string id;                // Identificador único del vuelo (p.ej. "IB3456")
+        string company;           // Compañía aérea operadora (nuevo en v2)
+        Position initialPosition; // Posición de origen del vuelo (no cambia tras el inicio)
+        Position currentPosition; // Posición actual durante la simulación
+        Position finalPosition;   // Posición de destino que el vuelo debe alcanzar
+        double velocidad;         // Velocidad de crucero en unidades/minuto
 
         // ── Constructores ────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Constructor v2 completo que incluye la compañía aérea.
+        /// Constructor v2 completo: acepta el identificador, la compañía y
+        /// las coordenadas de origen, destino y velocidad.
         /// </summary>
         public FlightPlan(string id, string company, double cpx, double cpy, double fpx, double fpy, double velocidad)
         {
             this.id = id;
             this.company = company;
+            // La posición inicial e inicial coinciden al arrancar el vuelo.
             this.initialPosition = new Position(cpx, cpy);
             this.currentPosition = new Position(cpx, cpy);
             this.finalPosition   = new Position(fpx, fpy);
@@ -32,12 +42,13 @@ namespace FlightLib
         }
 
         /// <summary>
-        /// Constructor v1 sin compañía — la establece a cadena vacía para compatibilidad.
+        /// Constructor v1 sin compañía: establece company a cadena vacía
+        /// para mantener compatibilidad con código anterior.
         /// </summary>
         public FlightPlan(string id, double cpx, double cpy, double fpx, double fpy, double velocidad)
         {
             this.id = id;
-            this.company = string.Empty;
+            this.company = string.Empty; // Sin compañía en v1
             this.initialPosition = new Position(cpx, cpy);
             this.currentPosition = new Position(cpx, cpy);
             this.finalPosition   = new Position(fpx, fpy);
@@ -45,7 +56,8 @@ namespace FlightLib
         }
 
         /// <summary>
-        /// Constructor con objetos Position — compatibilidad v1.
+        /// Constructor con objetos Position: compatibilidad v1 para código
+        /// que ya construye las posiciones externamente.
         /// </summary>
         public FlightPlan(string id, Position initialPosition, Position currentPosition, Position finalPosition, double velocidad)
         {
@@ -58,7 +70,8 @@ namespace FlightLib
         }
 
         /// <summary>
-        /// Constructor por defecto — todos los campos a valores neutros.
+        /// Constructor por defecto: todos los campos a valores neutros.
+        /// Útil para instanciar un vuelo vacío antes de llenarlo con datos.
         /// </summary>
         public FlightPlan()
         {
@@ -70,9 +83,8 @@ namespace FlightLib
             velocidad = 0;
         }
 
-        // ── Métodos de acceso ────────────────────────────────────────────────────
-
-        // Permiten consultar y modificar cada campo del vuelo desde la capa de UI.
+        // ── Métodos de acceso (getters y setters) ────────────────────────────────
+        // Siguen la convención del proyecto: GetX() / SetX() en lugar de propiedades.
 
         public string GetId() { return id; }
         public void SetId(string value) { id = value; }
@@ -95,76 +107,123 @@ namespace FlightLib
         public double GetVelocidad() { return velocidad; }
         public void SetVelocidad(double value) { velocidad = value; }
 
-        // Mueve el vuelo durante el tiempo indicado sin sobrepasar su destino.
+        // ── Movimiento ───────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Avanza el vuelo durante el intervalo de tiempo indicado (en minutos)
+        /// en línea recta hacia el destino, sin sobrepasarlo.
+        /// Algoritmo:
+        ///   1. Calcula la distancia a recorrer = velocidad × tiempo / 60 (si velocidad es u/h).
+        ///   2. Calcula la dirección mediante la hipotenusa entre la posición actual y el destino.
+        ///   3. Descompone el desplazamiento en componentes X e Y usando coseno y seno.
+        ///   4. Si la nueva posición supera el destino, fija la posición en el destino.
+        /// </summary>
         public void Mover(double tiempo)
         {
-            // Calcula la distancia recorrida con la velocidad actual.
+            // Distancia = velocidad (u/min) × tiempo (min) / 60
+            // La división entre 60 convierte el tiempo a horas si la velocidad es u/h,
+            // o bien ajusta la escala según la configuración del proyecto.
             double distancia = tiempo * this.velocidad / 60;
 
-            // Obtiene la dirección del desplazamiento hacia el destino.
-            double hipotenusa = Math.Sqrt((finalPosition.GetX() - currentPosition.GetX()) * (finalPosition.GetX() - currentPosition.GetX()) + (finalPosition.GetY() - currentPosition.GetY()) * (finalPosition.GetY() - currentPosition.GetY()));
-            if (hipotenusa == 0) return; // Ya está en destino
+            // Calcular la dirección del vector hacia el destino.
+            // La hipotenusa es la distancia euclídea entre posición actual y destino.
+            double hipotenusa = Math.Sqrt(
+                (finalPosition.GetX() - currentPosition.GetX()) * (finalPosition.GetX() - currentPosition.GetX()) +
+                (finalPosition.GetY() - currentPosition.GetY()) * (finalPosition.GetY() - currentPosition.GetY()));
+
+            // Si ya está en destino (hipotenusa ≈ 0), no hay que moverse.
+            if (hipotenusa == 0) return;
+
+            // Coseno del ángulo = componente horizontal de la dirección unitaria.
             double coseno = (finalPosition.GetX() - currentPosition.GetX()) / hipotenusa;
+
+            // Seno del ángulo = componente vertical de la dirección unitaria.
             double seno = (finalPosition.GetY() - currentPosition.GetY()) / hipotenusa;
 
-            // Calcula la nueva posición siguiendo la trayectoria.
+            // Nueva posición = posición actual + desplazamiento en cada eje.
             double x = currentPosition.GetX() + distancia * coseno;
             double y = currentPosition.GetY() + distancia * seno;
 
             Position nextPosition = new Position(x, y);
 
-            // Si el siguiente paso alcanza o supera el destino, fija la posición final.
+            // Comprobar si la nueva posición se ha pasado del destino.
+            // Si la distancia al siguiente punto es menor que la hipotenusa (distancia al destino),
+            // el avión aún no ha llegado y se mueve a la nueva posición.
+            // En caso contrario, se fija directamente en el destino para no sobrepasarlo.
             if (currentPosition.Distancia(nextPosition) < hipotenusa)
                 currentPosition = nextPosition;
             else
                 currentPosition = finalPosition;
         }
 
-        // Alias en inglés para mantener compatibilidad con los enunciados
+        /// <summary>
+        /// Alias en inglés de Mover() para compatibilidad con enunciados en inglés.
+        /// </summary>
         public void Move(double time)
         {
             Mover(time);
         }
 
+        /// <summary>
+        /// Reinicia el vuelo a su posición de origen.
+        /// Se crea un nuevo objeto Position para no compartir referencia con initialPosition.
+        /// </summary>
         public void Restart()
         {
-            // Reinicia el vuelo a su posición de origen.
             currentPosition = new Position(initialPosition.GetX(), initialPosition.GetY());
         }
 
-        // Indica si el vuelo ya ha alcanzado el destino.
+        // ── Consultas de estado ──────────────────────────────────────────────────
+
+        /// <summary>
+        /// Devuelve true si el vuelo ha alcanzado su destino.
+        /// Usa distancia < ε en lugar de comparar referencias para ser robusto
+        /// frente a redondeo de punto flotante.
+        /// </summary>
         public bool EstaDestino()
         {
-            // Usar distancia evita depender de si ambas posiciones son la misma referencia.
             return currentPosition.Distancia(finalPosition) < 1e-6;
         }
 
-        // Método público HasArrived
+        /// <summary>
+        /// Alias en inglés de EstaDestino().
+        /// </summary>
         public bool HasArrived()
         {
             return EstaDestino();
         }
 
-        // Calcula la distancia actual a otro vuelo.
+        /// <summary>
+        /// Calcula la distancia euclídea entre la posición actual de este vuelo
+        /// y la posición actual del vuelo pasado como parámetro.
+        /// </summary>
         public double Distance(FlightPlan plan)
         {
             return this.currentPosition.Distancia(plan.currentPosition);
         }
 
-        // Detecta conflicto cuando la separación es menor que la distancia de seguridad.
+        /// <summary>
+        /// Devuelve true si la separación actual entre este vuelo y el vuelo b
+        /// es inferior a la distancia de seguridad indicada.
+        /// </summary>
         public bool Conflicto(FlightPlan b, double distanciaSeguridad)
         {
             bool conclicto = false;
 
+            // Comparar la distancia euclídea entre posiciones actuales con el umbral.
             if (this.currentPosition.Distancia(b.currentPosition) < distanciaSeguridad)
                 conclicto = true;
 
             return conclicto;
         }
 
+        // ── Depuración ───────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Imprime en la consola un resumen del estado actual del vuelo.
+        /// Útil durante el desarrollo para verificar los valores internos.
+        /// </summary>
         public void EscribeConsola()
-        // Escribe en consola un resumen del estado del vuelo.
         {
             Console.WriteLine("******************************");
             Console.WriteLine("Datos del vuelo: ");
