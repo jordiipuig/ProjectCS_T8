@@ -15,6 +15,9 @@ namespace Interface_form_
         PictureBox[] flights;
         private Timer simulationTimer;
 
+        // Evita que la edición de la tabla dispare eventos anidados.
+        private bool _updatingGrid = false;
+
         public SimulationForm(FlightPlanList flightPlans, double cycleTime, double securityDistance)
         {
             InitializeComponent();
@@ -58,11 +61,11 @@ namespace Interface_form_
                 flights[i] = p;
                 i++;
             }
-            // Envía los iconos al fondo para que las trayectorias y elipses se dibujen encima.
             foreach (Control c in panel1.Controls)
-            {
                 c.SendToBack();
-            }
+
+            // (v1) Rellena la tabla de velocidades con los datos iniciales de cada vuelo.
+            LoadSpeedGrid();
         }
 
         // Abre el detalle del vuelo representado por el icono pulsado.
@@ -237,9 +240,72 @@ namespace Interface_form_
 
         private void infobtn_Click(object sender, EventArgs e)
         {
-            // Abre una vista tabular con la información y las distancias entre vuelos.
             FlightGrid form = new FlightGrid(_flightPlans);
             form.ShowDialog(this);
+        }
+
+        // ── V1: Reinicio manual ──────────────────────────────────────────────────
+
+        private void restartbtn_Click(object sender, EventArgs e)
+        {
+            RestartSimulation();
+        }
+
+        // ── V1: Edición de velocidades ───────────────────────────────────────────
+
+        // Carga (o recarga) la tabla con los IDs y velocidades actuales de cada vuelo.
+        private void LoadSpeedGrid()
+        {
+            _updatingGrid = true;
+            speedGrid.Rows.Clear();
+            for (int i = 0; i < _flightPlans.getnum(); i++)
+            {
+                FlightPlan f = _flightPlans.GetFlightPlan(i);
+                speedGrid.Rows.Add(f.GetId(), f.GetVelocidad().ToString("F1"));
+            }
+            _updatingGrid = false;
+        }
+
+        // Valida el valor, lo aplica al vuelo y reinicia la simulación automáticamente.
+        private void speedGrid_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            if (_updatingGrid || e.ColumnIndex != 1 || e.RowIndex < 0) return;
+
+            // Acepta tanto ',' como '.' como separador decimal.
+            string raw = speedGrid.Rows[e.RowIndex].Cells[1].Value?.ToString()?.Replace(',', '.');
+
+            if (!double.TryParse(raw, System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out double newSpeed)
+                || newSpeed <= 0)
+            {
+                MessageBox.Show("Introduce una velocidad positiva válida.", "Velocidad inválida",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                _updatingGrid = true;
+                speedGrid.Rows[e.RowIndex].Cells[1].Value =
+                    _flightPlans.GetFlightPlan(e.RowIndex).GetVelocidad().ToString("F1");
+                _updatingGrid = false;
+                return;
+            }
+
+            _flightPlans.GetFlightPlan(e.RowIndex).SetVelocidad(newSpeed);
+            RestartSimulation();
+        }
+
+        // Detiene el timer, resetea todos los vuelos a sus posiciones iniciales y redibuja.
+        private void RestartSimulation()
+        {
+            simulationTimer.Stop();
+            for (int i = 0; i < _flightPlans.getnum(); i++)
+            {
+                FlightPlan flight = _flightPlans.GetFlightPlan(i);
+                flight.Restart();
+                Position ini = flight.GetInitialPosition();
+                int x = (int)ini.GetX() - flights[i].Width / 2;
+                int y = panel1.Height - (int)ini.GetY() - flights[i].Height / 2;
+                flights[i].Location = new Point(x, y);
+            }
+            panel1.Invalidate();
+            LoadSpeedGrid();
         }
 
         // Revisa si algún par de vuelos está actualmente por debajo de la distancia de seguridad.
