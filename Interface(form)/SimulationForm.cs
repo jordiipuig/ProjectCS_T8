@@ -53,9 +53,12 @@ namespace Interface_form_
                 PictureBox p   = new PictureBox();
                 FlightPlan f   = _flightPlans.GetFlightPlan(i);
 
-                p.Width      = 20;
-                p.Height     = 20;
-                p.ClientSize = new Size(20, 20);
+                p.Width      = 30;
+                p.Height     = 30;
+                p.ClientSize = new Size(30, 30);
+
+                // Transparente para que el fondo del panel sea visible alrededor del círculo.
+                p.BackColor = System.Drawing.Color.Transparent;
 
                 Position initialPosition = f.GetInitialPosition();
                 int x = (int)initialPosition.GetX() - p.Width / 2;
@@ -433,8 +436,8 @@ namespace Interface_form_
                 FlightPlan flight = _flightPlans.GetFlightPlan(i);
                 flight.Restart();
                 Position ini = flight.GetInitialPosition();
-                int x = (int)ini.GetX() - flights[i].Width  / 2;
-                int y = panel1.Height - (int)ini.GetY() - flights[i].Height / 2;
+                int x = (int)ini.GetX() - (flights[i].Width  / 2);
+                int y = panel1.Height - (int)ini.GetY() - (flights[i].Height / 2);
                 flights[i].Location = new Point(x, y);
             }
             panel1.Invalidate();
@@ -551,15 +554,15 @@ namespace Interface_form_
 
         private static Bitmap CreateFlightMarkerImage()
         {
-            Bitmap bitmap = new Bitmap(20, 20);
+            Bitmap bitmap = new Bitmap(30, 30);
             using (Graphics g = Graphics.FromImage(bitmap))
-            using (SolidBrush fillBrush = new SolidBrush(Color.DarkRed))
-            using (Pen borderPen = new Pen(Color.White, 2))
+            using (SolidBrush fillBrush = new SolidBrush(Color.Red))
+            using (Pen borderPen = new Pen(Color.Black, 2))
             {
                 g.SmoothingMode = SmoothingMode.AntiAlias;
                 g.Clear(Color.Transparent);
-                g.FillEllipse(fillBrush, 2, 2, 16, 16);
-                g.DrawEllipse(borderPen, 2, 2, 16, 16);
+                g.FillEllipse(fillBrush, 2, 2, 26, 26);
+                g.DrawEllipse(borderPen, 2, 2, 26, 26);
             }
             return bitmap;
         }

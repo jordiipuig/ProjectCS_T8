@@ -7,13 +7,10 @@ namespace Interface_form_
 {
     public partial class FlightPlanForm : Form
     {
-        // La lista se recibe desde Main para modificar directamente el estado compartido.
         public FlightPlanList _flightplans;
 
         public FlightPlan Flightplan1 { get; set; }
         public FlightPlan Flightplan2 { get; set; }
-
-        // ── Constructor ──────────────────────────────────────────────────────────
 
         public FlightPlanForm(FlightPlanList flightplans)
         {
@@ -24,11 +21,8 @@ namespace Interface_form_
                 cancelButton.Click += CancelButton_Click;
         }
 
-        // ── Botón Accept ─────────────────────────────────────────────────────────
-
         private void acceptButton_Click(object sender, EventArgs e)
         {
-            // Leer y validar los identificadores.
             string id1 = id1box.Text.Trim();
             string id2 = id2box.Text.Trim();
 
@@ -46,43 +40,32 @@ namespace Interface_form_
                 return;
             }
 
-            // Leer las compañías (campo opcional).
             string company1 = company1box.Text.Trim();
             string company2 = company2box.Text.Trim();
             if (string.IsNullOrEmpty(company1)) company1 = "Unknown";
             if (string.IsNullOrEmpty(company2)) company2 = "Unknown";
 
-            // Parsear cada coordenada por separado.
-            // Se inicializan a 0 para evitar CS0165 (variable no asignada).
+            // Inicializar a 0 para evitar CS0165 — si el parseo falla, ok será false
+            // y se devuelve error antes de usar los valores.
             double o1x = 0, o1y = 0, d1x = 0, d1y = 0, velocity1 = 0;
             double o2x = 0, o2y = 0, d2x = 0, d2y = 0, velocity2 = 0;
 
-            bool ok1 =
-                TryParseDouble(origin1Xbox.Text,  out o1x)   &&
-                TryParseDouble(origin1Ybox.Text,  out o1y)   &&
-                TryParseDouble(dest1Xbox.Text,    out d1x)   &&
-                TryParseDouble(dest1Ybox.Text,    out d1y)   &&
-                TryParsePositiveDouble(velocity1box.Text, out velocity1);
-
-            bool ok2 =
-                TryParseDouble(origin2Xbox.Text,  out o2x)   &&
-                TryParseDouble(origin2Ybox.Text,  out o2y)   &&
-                TryParseDouble(dest2Xbox.Text,    out d2x)   &&
-                TryParseDouble(dest2Ybox.Text,    out d2y)   &&
-                TryParsePositiveDouble(velocity2box.Text, out velocity2);
-
-            if (!ok1 || !ok2)
+            if (!TryParsePoint(origin1box.Text,      out o1x, out o1y)      ||
+                !TryParsePoint(destination1box.Text, out d1x, out d1y)      ||
+                !TryParsePositiveDouble(velocity1box.Text, out velocity1)   ||
+                !TryParsePoint(origin2box.Text,      out o2x, out o2y)      ||
+                !TryParsePoint(destination2box.Text, out d2x, out d2y)      ||
+                !TryParsePositiveDouble(velocity2box.Text, out velocity2))
             {
                 MessageBox.Show(
-                    "Revise los valores numéricos.\n" +
-                    "- Las coordenadas X e Y deben ser números.\n" +
-                    "- La velocidad debe ser mayor que 0.\n" +
-                    "- Rango recomendado del panel: X 0-1200, Y 0-900.",
+                    "Revise el formato de entrada.\n" +
+                    "- Origen y destino: escriba X,Y  (ejemplo: 100,450)\n" +
+                    "- Rango del panel:  X entre 0 y 1200,  Y entre 0 y 900\n" +
+                    "- Velocidad: número mayor que 0.",
                     "Error de validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // Construir los vuelos con coordenadas separadas.
             Flightplan1 = new FlightPlan(id1, company1, o1x, o1y, d1x, d1y, velocity1);
             Flightplan2 = new FlightPlan(id2, company2, o2x, o2y, d2x, d2y, velocity2);
 
@@ -96,6 +79,15 @@ namespace Interface_form_
 
         // ── Helpers de parseo ────────────────────────────────────────────────────
 
+        private static bool TryParsePoint(string text, out double x, out double y)
+        {
+            x = 0; y = 0;
+            string[] values = text.Split(',');
+            if (values.Length != 2) return false;
+            return TryParseDouble(values[0].Trim(), out x) &&
+                   TryParseDouble(values[1].Trim(), out y);
+        }
+
         private static bool TryParsePositiveDouble(string text, out double value)
         {
             return TryParseDouble(text, out value) && value > 0;
@@ -103,7 +95,7 @@ namespace Interface_form_
 
         private static bool TryParseDouble(string text, out double value)
         {
-            // Acepta tanto coma como punto como separador decimal.
+            // Normalizar coma → punto para aceptar ambos separadores decimales.
             string normalized = text.Trim().Replace(',', '.');
             return double.TryParse(normalized, NumberStyles.Float,
                 CultureInfo.InvariantCulture, out value);
@@ -117,11 +109,11 @@ namespace Interface_form_
             Close();
         }
 
-        // ── Botón Sin conflicto (vuelo de prueba rápido) ─────────────────────────
+        // ── Botones de prueba rápida ──────────────────────────────────────────────
 
         private void nonConflictbtn_Click(object sender, EventArgs e)
         {
-            // Dos vuelos paralelos que no se cruzan: no generan conflicto.
+            // Dos vuelos horizontales paralelos — no se cruzan nunca.
             Flightplan1 = new FlightPlan("IBE001", "Iberia",  100, 300, 1100, 300, 100);
             Flightplan2 = new FlightPlan("VLG002", "Vueling", 100, 600, 1100, 600, 100);
 
@@ -133,11 +125,9 @@ namespace Interface_form_
             Close();
         }
 
-        // ── Botón Con conflicto (vuelo de prueba rápido) ─────────────────────────
-
         private void conflictbtn_Click(object sender, EventArgs e)
         {
-            // Vuelo horizontal y vuelo vertical que se cruzan en (600, 450).
+            // IBE001 horizontal + VLG002 vertical: se cruzan en (600, 450).
             Flightplan1 = new FlightPlan("IBE001", "Iberia",  100, 450, 1100, 450, 100);
             Flightplan2 = new FlightPlan("VLG002", "Vueling", 600, 800,  600, 100, 100);
 
