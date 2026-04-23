@@ -59,12 +59,6 @@ namespace Interface_form_
 
                 // Transparente para que el fondo del panel sea visible alrededor del círculo.
                 p.BackColor = System.Drawing.Color.Transparent;
-
-                Position initialPosition = f.GetInitialPosition();
-                int x = (int)initialPosition.GetX() - p.Width / 2;
-                int y = panel1.Height - (int)initialPosition.GetY() - p.Height / 2;
-
-                p.Location  = new Point(x, y);
                 p.SizeMode  = PictureBoxSizeMode.StretchImage;
                 p.Image     = CreateFlightMarkerImage();
                 p.Tag       = i;
@@ -72,6 +66,9 @@ namespace Interface_form_
 
                 panel1.Controls.Add(p);
                 flights[i] = p;
+
+                // Posicionar dentro del panel (SetMarkerPosition requiere que flights[i] exista).
+                SetMarkerPosition(i, f.GetInitialPosition());
                 i++;
             }
 
@@ -106,12 +103,7 @@ namespace Interface_form_
             {
                 FlightPlan flight = _flightPlans.GetFlightPlan(i);
                 flight.Mover(_cycleTime);
-
-                Position currentPosition = flight.GetCurrentPosition();
-                int x = (int)currentPosition.GetX() - flights[i].Width / 2;
-                int y = panel1.Height - (int)currentPosition.GetY() - flights[i].Height / 2;
-
-                flights[i].Location = new Point(x, y);
+                SetMarkerPosition(i, flight.GetCurrentPosition());
             }
             panel1.Invalidate();
 
@@ -166,12 +158,7 @@ namespace Interface_form_
             {
                 FlightPlan flight = _flightPlans.GetFlightPlan(i);
                 flight.Mover(_cycleTime);
-
-                Position currentPosition = flight.GetCurrentPosition();
-                int x = (int)currentPosition.GetX() - flights[i].Width / 2;
-                int y = panel1.Height - (int)currentPosition.GetY() - flights[i].Height / 2;
-
-                flights[i].Location = new Point(x, y);
+                SetMarkerPosition(i, flight.GetCurrentPosition());
             }
             panel1.Invalidate();
 
@@ -318,12 +305,7 @@ namespace Interface_form_
             {
                 // Actualizar la posición visual de cada icono de vuelo.
                 for (int i = 0; i < _flightPlans.getnum(); i++)
-                {
-                    Position pos = _flightPlans.GetFlightPlan(i).GetCurrentPosition();
-                    int x = (int)pos.GetX() - flights[i].Width  / 2;
-                    int y = panel1.Height - (int)pos.GetY() - flights[i].Height / 2;
-                    flights[i].Location = new Point(x, y);
-                }
+                    SetMarkerPosition(i, _flightPlans.GetFlightPlan(i).GetCurrentPosition());
                 panel1.Invalidate();
             }
             else
@@ -435,10 +417,7 @@ namespace Interface_form_
             {
                 FlightPlan flight = _flightPlans.GetFlightPlan(i);
                 flight.Restart();
-                Position ini = flight.GetInitialPosition();
-                int x = (int)ini.GetX() - (flights[i].Width  / 2);
-                int y = panel1.Height - (int)ini.GetY() - (flights[i].Height / 2);
-                flights[i].Location = new Point(x, y);
+                SetMarkerPosition(i, flight.GetInitialPosition());
             }
             panel1.Invalidate();
             LoadSpeedGrid();
@@ -539,6 +518,23 @@ namespace Interface_form_
 
             b.SetVelocidad(originalSpeed); // Restaurar si no se pudo resolver
             return false;
+        }
+
+        /// <summary>
+        /// Calcula la posición en pantalla del marcador i y la fija dentro del panel.
+        /// El clamping evita que el círculo salga del borde si las coordenadas del
+        /// vuelo están en el límite del área de simulación.
+        /// </summary>
+        private void SetMarkerPosition(int i, Position pos)
+        {
+            int x = (int)pos.GetX() - flights[i].Width  / 2;
+            int y = panel1.Height - (int)pos.GetY() - flights[i].Height / 2;
+
+            // Mantener el marcador dentro de los límites del panel.
+            x = Math.Max(0, Math.Min(panel1.Width  - flights[i].Width,  x));
+            y = Math.Max(0, Math.Min(panel1.Height - flights[i].Height, y));
+
+            flights[i].Location = new Point(x, y);
         }
 
         private static void Normalize(ref double x, ref double y)

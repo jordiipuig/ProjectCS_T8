@@ -50,18 +50,20 @@ namespace Interface_form_
             double o1x = 0, o1y = 0, d1x = 0, d1y = 0, velocity1 = 0;
             double o2x = 0, o2y = 0, d2x = 0, d2y = 0, velocity2 = 0;
 
-            if (!TryParsePoint(origin1box.Text,      out o1x, out o1y)      ||
-                !TryParsePoint(destination1box.Text, out d1x, out d1y)      ||
-                !TryParsePositiveDouble(velocity1box.Text, out velocity1)   ||
-                !TryParsePoint(origin2box.Text,      out o2x, out o2y)      ||
-                !TryParsePoint(destination2box.Text, out d2x, out d2y)      ||
-                !TryParsePositiveDouble(velocity2box.Text, out velocity2))
+            if (!TryParsePoint(origin1box.Text,      out o1x, out o1y)    ||
+                !TryParsePoint(destination1box.Text, out d1x, out d1y)    ||
+                !TryParseVelocity(velocity1box.Text, out velocity1)       ||
+                !TryParsePoint(origin2box.Text,      out o2x, out o2y)    ||
+                !TryParsePoint(destination2box.Text, out d2x, out d2y)    ||
+                !TryParseVelocity(velocity2box.Text, out velocity2))
             {
                 MessageBox.Show(
-                    "Revise el formato de entrada.\n" +
-                    "- Origen y destino: escriba X,Y  (ejemplo: 100,450)\n" +
-                    "- Rango del panel:  X entre 0 y 1200,  Y entre 0 y 900\n" +
-                    "- Velocidad: número mayor que 0.",
+                    "Revise los valores introducidos:\n\n" +
+                    "· Origen y Destino: formato  X,Y\n" +
+                    "  X debe estar entre 0 y 1200\n" +
+                    "  Y debe estar entre 0 y 900\n" +
+                    "  Ejemplo válido: 100,450\n\n" +
+                    "· Velocidad: número entre 1 y 1000 (u/min)",
                     "Error de validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -77,20 +79,34 @@ namespace Interface_form_
             Close();
         }
 
-        // ── Helpers de parseo ────────────────────────────────────────────────────
+        // ── Helpers de parseo y validación ──────────────────────────────────────
 
+        // Límites del espacio de simulación (deben coincidir con panel1.Size en SimulationForm).
+        private const double PANEL_W = 1200;
+        private const double PANEL_H = 900;
+        private const double VEL_MAX = 1000;
+
+        /// <summary>
+        /// Parsea "X,Y" y valida que ambas coordenadas estén dentro del panel.
+        /// </summary>
         private static bool TryParsePoint(string text, out double x, out double y)
         {
             x = 0; y = 0;
             string[] values = text.Split(',');
             if (values.Length != 2) return false;
-            return TryParseDouble(values[0].Trim(), out x) &&
-                   TryParseDouble(values[1].Trim(), out y);
+            if (!TryParseDouble(values[0].Trim(), out x)) return false;
+            if (!TryParseDouble(values[1].Trim(), out y)) return false;
+            // Comprobar que las coordenadas estén dentro del área visible del panel.
+            return x >= 0 && x <= PANEL_W && y >= 0 && y <= PANEL_H;
         }
 
-        private static bool TryParsePositiveDouble(string text, out double value)
+        /// <summary>
+        /// Valida que la velocidad sea un número entre 1 y VEL_MAX (1000).
+        /// </summary>
+        private static bool TryParseVelocity(string text, out double value)
         {
-            return TryParseDouble(text, out value) && value > 0;
+            if (!TryParseDouble(text, out value)) return false;
+            return value > 0 && value <= VEL_MAX;
         }
 
         private static bool TryParseDouble(string text, out double value)

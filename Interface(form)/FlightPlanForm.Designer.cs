@@ -78,28 +78,28 @@ namespace Interface_form_
             // label2 – Origin (formato X,Y)
             this.label2.AutoSize = true;
             this.label2.Font     = new System.Drawing.Font("Microsoft Sans Serif", 8F);
-            this.label2.Location = new System.Drawing.Point(176, 60);
-            this.label2.Name     = "label2"; this.label2.TabIndex = 4; this.label2.Text = "Origin (X,Y)";
+            this.label2.Location = new System.Drawing.Point(176, 55);
+            this.label2.Name     = "label2"; this.label2.TabIndex = 4; this.label2.Text = "Origen X,Y  (ej: 100,450)";
 
             // origin1box
             this.origin1box.Location = new System.Drawing.Point(169, 92);
-            this.origin1box.Name     = "origin1box"; this.origin1box.Size = new System.Drawing.Size(100, 34); this.origin1box.TabIndex = 1;
+            this.origin1box.Name     = "origin1box"; this.origin1box.Size = new System.Drawing.Size(110, 34); this.origin1box.TabIndex = 1;
 
             // label3 – Destination (formato X,Y)
             this.label3.AutoSize = true;
             this.label3.Font     = new System.Drawing.Font("Microsoft Sans Serif", 8F);
-            this.label3.Location = new System.Drawing.Point(302, 60);
-            this.label3.Name     = "label3"; this.label3.TabIndex = 5; this.label3.Text = "Destination (X,Y)";
+            this.label3.Location = new System.Drawing.Point(302, 55);
+            this.label3.Name     = "label3"; this.label3.TabIndex = 5; this.label3.Text = "Destino X,Y  (ej: 900,450)";
 
             // destination1box
             this.destination1box.Location = new System.Drawing.Point(304, 92);
-            this.destination1box.Name     = "destination1box"; this.destination1box.Size = new System.Drawing.Size(100, 34); this.destination1box.TabIndex = 2;
+            this.destination1box.Name     = "destination1box"; this.destination1box.Size = new System.Drawing.Size(110, 34); this.destination1box.TabIndex = 2;
 
             // label7 – Velocity
             this.label7.AutoSize = true;
             this.label7.Font     = new System.Drawing.Font("Microsoft Sans Serif", 8F);
-            this.label7.Location = new System.Drawing.Point(447, 60);
-            this.label7.Name     = "label7"; this.label7.TabIndex = 7; this.label7.Text = "Velocity (u/min)";
+            this.label7.Location = new System.Drawing.Point(447, 55);
+            this.label7.Name     = "label7"; this.label7.TabIndex = 7; this.label7.Text = "Vel (1-1000 u/min)";
 
             // velocity1box
             this.velocity1box.Location = new System.Drawing.Point(450, 92);
@@ -147,28 +147,28 @@ namespace Interface_form_
             // label5 – Origin
             this.label5.AutoSize = true;
             this.label5.Font     = new System.Drawing.Font("Microsoft Sans Serif", 8F);
-            this.label5.Location = new System.Drawing.Point(176, 60);
-            this.label5.Name     = "label5"; this.label5.TabIndex = 5; this.label5.Text = "Origin (X,Y)";
+            this.label5.Location = new System.Drawing.Point(176, 55);
+            this.label5.Name     = "label5"; this.label5.TabIndex = 5; this.label5.Text = "Origen X,Y  (ej: 100,450)";
 
             // origin2box
             this.origin2box.Location = new System.Drawing.Point(169, 92);
-            this.origin2box.Name     = "origin2box"; this.origin2box.Size = new System.Drawing.Size(100, 34); this.origin2box.TabIndex = 1;
+            this.origin2box.Name     = "origin2box"; this.origin2box.Size = new System.Drawing.Size(110, 34); this.origin2box.TabIndex = 1;
 
             // label6 – Destination
             this.label6.AutoSize = true;
             this.label6.Font     = new System.Drawing.Font("Microsoft Sans Serif", 8F);
-            this.label6.Location = new System.Drawing.Point(300, 60);
-            this.label6.Name     = "label6"; this.label6.TabIndex = 6; this.label6.Text = "Destination (X,Y)";
+            this.label6.Location = new System.Drawing.Point(300, 55);
+            this.label6.Name     = "label6"; this.label6.TabIndex = 6; this.label6.Text = "Destino X,Y  (ej: 900,450)";
 
             // destination2box
             this.destination2box.Location = new System.Drawing.Point(304, 92);
-            this.destination2box.Name     = "destination2box"; this.destination2box.Size = new System.Drawing.Size(100, 34); this.destination2box.TabIndex = 2;
+            this.destination2box.Name     = "destination2box"; this.destination2box.Size = new System.Drawing.Size(110, 34); this.destination2box.TabIndex = 2;
 
             // label8 – Velocity
             this.label8.AutoSize = true;
             this.label8.Font     = new System.Drawing.Font("Microsoft Sans Serif", 8F);
-            this.label8.Location = new System.Drawing.Point(450, 60);
-            this.label8.Name     = "label8"; this.label8.TabIndex = 8; this.label8.Text = "Velocity (u/min)";
+            this.label8.Location = new System.Drawing.Point(450, 55);
+            this.label8.Name     = "label8"; this.label8.TabIndex = 8; this.label8.Text = "Vel (1-1000 u/min)";
 
             // velocity2box
             this.velocity2box.Location = new System.Drawing.Point(451, 92);
