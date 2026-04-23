@@ -160,5 +160,10 @@ namespace Interface_form_
             _flightplans.Clear();
             MessageBox.Show("La lista de planes de vuelo ha sido vaciada.", "Reset", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
+
+        private void label7_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }

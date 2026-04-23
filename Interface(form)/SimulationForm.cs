@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Globalization;
 using System.Windows.Forms;
 using FlightLib;
 
@@ -12,8 +13,15 @@ namespace Interface_form_
         private readonly FlightPlanList _flightPlans;
         private readonly double _cycleTime;
         private readonly double _securityDistance;
-        PictureBox[] flights;
-        private Timer simulationTimer;
+        private readonly Timer simulationTimer;
+
+        private const int FlightIdColumnIndex = 0;
+        private const int FlightPositionColumnIndex = 1;
+        private const int FlightSpeedColumnIndex = 2;
+
+        private PictureBox[] flights;
+        private bool _updatingGrid;
+        private bool _resumeAfterGridEdit;
 
         public SimulationForm(FlightPlanList flightPlans, double cycleTime, double securityDistance)
         {
@@ -23,15 +31,47 @@ namespace Interface_form_
             _securityDistance = securityDistance;
             panel1.Paint += panel1_Paint;
 
+            ConfigureFlightListGrid();
+
             // Temporizador para ejecutar automáticamente los mismos pasos del botón Cycle.
             simulationTimer = new Timer();
             simulationTimer.Interval = (int)(_cycleTime * 1000); // Convert seconds to milliseconds
             simulationTimer.Tick += timer1_Tick;
         }
 
+        private void ConfigureFlightListGrid()
+        {
+            flightListGrid.AutoGenerateColumns = false;
+            flightListGrid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            flightListGrid.MultiSelect = false;
+            flightListGrid.RowHeadersVisible = false;
+            flightListGrid.SelectionMode = DataGridViewSelectionMode.CellSelect;
+
+            flightListGrid.Columns.Clear();
+            flightListGrid.Columns.Add(CreateTextColumn("FlightId", "ID", true));
+            flightListGrid.Columns.Add(CreateTextColumn("FlightPosition", "Posicion actual", true));
+            flightListGrid.Columns.Add(CreateTextColumn("FlightSpeed", "Velocidad", false));
+
+            flightListGrid.CellBeginEdit += flightListGrid_CellBeginEdit;
+            flightListGrid.CellValidating += flightListGrid_CellValidating;
+            flightListGrid.CellEndEdit += flightListGrid_CellEndEdit;
+            flightListGrid.DataError += flightListGrid_DataError;
+        }
+
+        private static DataGridViewTextBoxColumn CreateTextColumn(string name, string headerText, bool readOnly)
+        {
+            return new DataGridViewTextBoxColumn
+            {
+                Name = name,
+                HeaderText = headerText,
+                ReadOnly = readOnly,
+                SortMode = DataGridViewColumnSortMode.NotSortable
+            };
+        }
+
         private void SimulationForm_Load(object sender, EventArgs e)
         {
-            // Crea un icono por vuelo y lo sitúa en la posición inicial del plan.
+            // Crea un icono por vuelo y lo sitúa según la posición actual del plan.
             flights = new PictureBox[_flightPlans.getnum()];
             int i = 0;
             while (i < _flightPlans.getnum())
@@ -42,27 +82,26 @@ namespace Interface_form_
                 p.Width = 20;
                 p.Height = 20;
                 p.ClientSize = new Size(20, 20);
-
-                Position initialPosition = f.GetInitialPosition();
-                int x = (int)initialPosition.GetX() - p.Width / 2;
-                int y = panel1.Height - (int)initialPosition.GetY() - p.Height / 2;
-
-                p.Location = new Point(x, y);
                 p.SizeMode = PictureBoxSizeMode.StretchImage;
                 p.Image = CreateFlightMarkerImage();
 
                 p.Tag = i;
-                p.Click += new System.EventHandler(this.flightInfo);
+                p.Click += new EventHandler(this.flightInfo);
 
                 panel1.Controls.Add(p);
                 flights[i] = p;
                 i++;
             }
+
             // Envía los iconos al fondo para que las trayectorias y elipses se dibujen encima.
             foreach (Control c in panel1.Controls)
             {
                 c.SendToBack();
             }
+
+            RefreshFlightMarkers();
+            RefreshFlightList();
+            panel1.Invalidate();
         }
 
         // Abre el detalle del vuelo representado por el icono pulsado.
@@ -77,22 +116,84 @@ namespace Interface_form_
 
         private void cyclebtn_Click(object sender, EventArgs e)
         {
-            // Ejecuta un único ciclo manual: mover, refrescar pantalla y revisar conflictos.
+            AdvanceOneStep();
+        }
+
+        private void AdvanceOneStep()
+        {
+            // Ejecuta un único ciclo: mover, refrescar pantalla y revisar conflictos.
             for (int i = 0; i < _flightPlans.getnum(); i++)
             {
                 FlightPlan flight = _flightPlans.GetFlightPlan(i);
                 flight.Mover(_cycleTime);
+            }
 
+            RefreshFlightMarkers();
+            RefreshFlightList();
+            panel1.Invalidate();
+            CheckConflicts();
+        }
+
+        private void RefreshFlightMarkers()
+        {
+            if (flights == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _flightPlans.getnum(); i++)
+            {
+                FlightPlan flight = _flightPlans.GetFlightPlan(i);
                 Position currentPosition = flight.GetCurrentPosition();
                 int x = (int)currentPosition.GetX() - flights[i].Width / 2;
                 int y = panel1.Height - (int)currentPosition.GetY() - flights[i].Height / 2;
 
                 flights[i].Location = new Point(x, y);
             }
+        }
+
+        private void RefreshFlightList()
+        {
+            _updatingGrid = true;
+            try
+            {
+                flightListGrid.Rows.Clear();
+
+                for (int i = 0; i < _flightPlans.getnum(); i++)
+                {
+                    FlightPlan plan = _flightPlans.GetFlightPlan(i);
+                    Position position = plan.GetCurrentPosition();
+                    string positionText = $"({position.GetX():F2}, {position.GetY():F2})";
+                    string speedText = plan.GetVelocidad().ToString("F2", CultureInfo.CurrentCulture);
+
+                    flightListGrid.Rows.Add(plan.GetId(), positionText, speedText);
+                }
+            }
+            finally
+            {
+                _updatingGrid = false;
+            }
+        }
+
+        private void RestartSimulation(bool resumeAfterRestart)
+        {
+            bool wasRunning = simulationTimer.Enabled;
+            simulationTimer.Stop();
+
+            _flightPlans.RestartAll();
+            RefreshFlightMarkers();
+            RefreshFlightList();
             panel1.Invalidate();
 
-            // Comprobar conflictos después de mover los vuelos
-            CheckConflicts();
+            if (resumeAfterRestart)
+            {
+                simulationTimer.Interval = (int)(_cycleTime * 1000);
+                simulationTimer.Start();
+            }
+            else if (wasRunning)
+            {
+                simulationTimer.Interval = (int)(_cycleTime * 1000);
+            }
         }
 
         private void panel1_Paint(object sender, PaintEventArgs e)
@@ -126,27 +227,11 @@ namespace Interface_form_
                     e.Graphics.DrawEllipse(circlePen, ellipseX, ellipseY, radius * 2, radius * 2);
                 }
             }
-            
         }
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            // Repite automáticamente el mismo avance que realiza el botón Cycle.
-            for (int i = 0; i < _flightPlans.getnum(); i++)
-            {
-                FlightPlan flight = _flightPlans.GetFlightPlan(i);
-                flight.Mover(_cycleTime);
-
-                Position currentPosition = flight.GetCurrentPosition();
-                int x = (int)currentPosition.GetX() - flights[i].Width / 2;
-                int y = panel1.Height - (int)currentPosition.GetY() - flights[i].Height / 2;
-
-                flights[i].Location = new Point(x, y);
-            }
-            panel1.Invalidate();
-
-            // Comprobar conflictos después de mover los vuelos
-            CheckConflicts();
+            AdvanceOneStep();
         }
 
         private void startbtn_Click(object sender, EventArgs e)
@@ -187,6 +272,8 @@ namespace Interface_form_
                 {
                     // Intenta resolver el conflicto reduciendo la velocidad de uno de los vuelos.
                     bool resolved = ResolveConflictBySpeed(_flightPlans.GetFlightPlan(conflictA), _flightPlans.GetFlightPlan(conflictB), _securityDistance);
+                    RefreshFlightList();
+
                     if (resolved)
                     {
                         MessageBox.Show(
@@ -207,7 +294,7 @@ namespace Interface_form_
                 // Si el usuario responde No, la simulación continúa tal cual.
             }
 
-            simulationTimer.Interval = (int)(_cycleTime * 1000); // Update interval in case _cycleTime changed
+            simulationTimer.Interval = (int)(_cycleTime * 1000);
             simulationTimer.Start();
         }
 
@@ -226,6 +313,7 @@ namespace Interface_form_
                     return true; // Conflict resolved
                 }
             }
+
             b.SetVelocidad(originalSpeed); // Restore if not resolved
             return false;
         }
@@ -298,8 +386,6 @@ namespace Interface_form_
             {
                 MessageBox.Show("No se predicen conflictos futuros entre los vuelos.", "Sin conflicto", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-
-
         }
 
         private bool WillFlightsConflict(FlightPlan a, FlightPlan b, double securityDistance)
@@ -346,6 +432,97 @@ namespace Interface_form_
 
             double dist = Math.Sqrt((aX - bX) * (aX - bX) + (aY - bY) * (aY - bY));
             return dist < securityDistance;
+        }
+
+        private void flightListGrid_CellBeginEdit(object sender, DataGridViewCellCancelEventArgs e)
+        {
+            if (_updatingGrid || e.RowIndex < 0 || e.ColumnIndex != FlightSpeedColumnIndex)
+            {
+                return;
+            }
+
+            _resumeAfterGridEdit = simulationTimer.Enabled;
+            simulationTimer.Stop();
+        }
+
+        private void flightListGrid_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
+        {
+            if (_updatingGrid || e.RowIndex < 0 || e.ColumnIndex != FlightSpeedColumnIndex)
+            {
+                return;
+            }
+
+            string valueText = Convert.ToString(e.FormattedValue)?.Trim();
+            if (!TryParsePositiveDouble(valueText, out _))
+            {
+                e.Cancel = true;
+                MessageBox.Show(
+                    "La velocidad debe ser un valor numérico mayor que 0.",
+                    "Error de validación",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+        }
+
+        private void flightListGrid_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            if (_updatingGrid || e.RowIndex < 0 || e.ColumnIndex != FlightSpeedColumnIndex)
+            {
+                return;
+            }
+
+            try
+            {
+                FlightPlan flight = _flightPlans.GetFlightPlan(e.RowIndex);
+                if (flight == null)
+                {
+                    ResumeTimerAfterGridEditIfNeeded();
+                    return;
+                }
+
+                string valueText = Convert.ToString(flightListGrid.Rows[e.RowIndex].Cells[e.ColumnIndex].Value)?.Trim();
+                if (!TryParsePositiveDouble(valueText, out double newSpeed))
+                {
+                    RefreshFlightList();
+                    ResumeTimerAfterGridEditIfNeeded();
+                    return;
+                }
+
+                if (Math.Abs(flight.GetVelocidad() - newSpeed) < 1e-6)
+                {
+                    RefreshFlightList();
+                    ResumeTimerAfterGridEditIfNeeded();
+                    return;
+                }
+
+                flight.SetVelocidad(newSpeed);
+                RestartSimulation(true);
+            }
+            finally
+            {
+                _resumeAfterGridEdit = false;
+            }
+        }
+
+        private void flightListGrid_DataError(object sender, DataGridViewDataErrorEventArgs e)
+        {
+            e.Cancel = true;
+        }
+
+        private void ResumeTimerAfterGridEditIfNeeded()
+        {
+            if (_resumeAfterGridEdit)
+            {
+                simulationTimer.Interval = (int)(_cycleTime * 1000);
+                simulationTimer.Start();
+            }
+        }
+
+        private static bool TryParsePositiveDouble(string text, out double value)
+        {
+            return (double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value) ||
+                    double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value))
+                   && value > 0;
         }
 
         private static void Normalize(ref double x, ref double y)

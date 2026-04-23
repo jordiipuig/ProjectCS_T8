@@ -54,6 +54,16 @@ namespace FlightLib
             }
 
         }
+        public void RestartAll()
+        {
+            // Reinicia todos los vuelos a su posición de origen.
+            int i = 0;
+            while (i < number)
+            {
+                vector[i].Restart();
+                i++;
+            }
+        }
         public void Clear()
         {
             // Vacía por completo la colección de vuelos cargados.

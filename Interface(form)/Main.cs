@@ -61,5 +61,9 @@ namespace Interface_form_
            
         }
 
+        private void Main_Load(object sender, EventArgs e)
+        {
+
+        }
     }
 }

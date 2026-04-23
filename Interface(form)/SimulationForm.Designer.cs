@@ -28,7 +28,10 @@
             this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.infobtn = new System.Windows.Forms.Button();
             this.conflictbtn = new System.Windows.Forms.Button();
+            this.flightListLabel = new System.Windows.Forms.Label();
+            this.flightListGrid = new System.Windows.Forms.DataGridView();
             this.groupBox1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.flightListGrid)).BeginInit();
             this.SuspendLayout();
             // 
             // panel1
@@ -104,11 +107,34 @@
             this.conflictbtn.UseVisualStyleBackColor = true;
             this.conflictbtn.Click += new System.EventHandler(this.conflictbtn_Click);
             // 
+            // flightListLabel
+            // 
+            this.flightListLabel.AutoSize = true;
+            this.flightListLabel.Location = new System.Drawing.Point(1295, 603);
+            this.flightListLabel.Name = "flightListLabel";
+            this.flightListLabel.Size = new System.Drawing.Size(90, 25);
+            this.flightListLabel.TabIndex = 5;
+            this.flightListLabel.Text = "Flight list";
+            // 
+            // flightListGrid
+            // 
+            this.flightListGrid.AllowUserToAddRows = false;
+            this.flightListGrid.AllowUserToDeleteRows = false;
+            this.flightListGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.flightListGrid.Location = new System.Drawing.Point(1300, 643);
+            this.flightListGrid.Name = "flightListGrid";
+            this.flightListGrid.RowHeadersWidth = 72;
+            this.flightListGrid.RowTemplate.Height = 31;
+            this.flightListGrid.Size = new System.Drawing.Size(390, 288);
+            this.flightListGrid.TabIndex = 6;
+            // 
             // SimulationForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(11F, 24F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1747, 1065);
+            this.Controls.Add(this.flightListGrid);
+            this.Controls.Add(this.flightListLabel);
             this.Controls.Add(this.conflictbtn);
             this.Controls.Add(this.infobtn);
             this.Controls.Add(this.groupBox1);
@@ -119,7 +145,9 @@
             this.Text = "SimulationForm";
             this.Load += new System.EventHandler(this.SimulationForm_Load);
             this.groupBox1.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.flightListGrid)).EndInit();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -133,5 +161,7 @@
         private System.Windows.Forms.Timer timer1;
         private System.Windows.Forms.Button infobtn;
         private System.Windows.Forms.Button conflictbtn;
+        private System.Windows.Forms.Label flightListLabel;
+        private System.Windows.Forms.DataGridView flightListGrid;
     }
 }
